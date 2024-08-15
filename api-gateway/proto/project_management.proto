@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package project_management;
 
-option go_package = ".";
+option go_package = "../proto/";
 
 service ProjectManagementService {
   rpc GetProject (ProjectRequest) returns (ProjectResponse);

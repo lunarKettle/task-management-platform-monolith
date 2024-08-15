@@ -4,7 +4,7 @@
 // - protoc             v5.27.2
 // source: project_management.proto
 
-package __
+package proto
 
 import (
 	context "context"
