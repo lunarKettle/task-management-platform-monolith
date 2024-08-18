@@ -5,7 +5,7 @@ import (
 	"log"
 	"net"
 
-	pb "project-management-service/proto"
+	pb "project_management_service/proto"
 
 	"google.golang.org/grpc"
 )

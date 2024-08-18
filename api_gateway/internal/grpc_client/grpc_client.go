@@ -1,7 +1,7 @@
 package grpc_client
 
 import (
-	pb "api-gateway/proto"
+	pb "api_gateway/proto"
 	"context"
 	"log"
 	"time"

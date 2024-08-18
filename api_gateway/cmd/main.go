@@ -1,7 +1,7 @@
 package main
 
 import (
-	"api-gateway/internal/grpc_client"
+	"api_gateway/internal/grpc_client"
 	"log"
 	"time"
 )

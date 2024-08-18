@@ -1,4 +1,4 @@
-module project-management-service
+module project_management_service
 
 go 1.22.5
 

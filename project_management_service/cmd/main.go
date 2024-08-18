@@ -1,7 +1,7 @@
 package main
 
 import (
-	"project-management-service/internal/grpc_handler"
+	"project_management_service/internal/grpc_handler"
 )
 
 func main() {
