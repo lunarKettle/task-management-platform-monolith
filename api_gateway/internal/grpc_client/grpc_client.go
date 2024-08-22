@@ -1,6 +1,7 @@
 package grpc_client
 
 import (
+	"api_gateway/internal/models"
 	pb "api_gateway/proto"
 	"context"
 	"log"
@@ -33,12 +34,17 @@ func (g *GRPCClient) Close() {
 	}
 }
 
-func (g *GRPCClient) GetProject() (*pb.ProjectResponse, error) {
+func (g *GRPCClient) GetProject(id uint32) (models.Project, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	r, err := g.client.GetProject(ctx, &pb.ProjectRequest{})
+	r, err := g.client.GetProject(ctx, &pb.ProjectRequest{ProjectId: id})
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
-	return r, err
+	project := models.Project{
+		Id:          r.GetProjectId(),
+		Name:        r.GetProjectName(),
+		Description: r.GetProjectDescription(),
+	}
+	return project, err
 }

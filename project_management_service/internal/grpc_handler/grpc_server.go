@@ -33,6 +33,7 @@ func NewGRPCServer() *GRPCServer {
 
 func (s *GRPCServer) GetProject(ctx context.Context, request *pb.ProjectRequest) (*pb.ProjectResponse, error) {
 	return &pb.ProjectResponse{
+		ProjectId:          request.ProjectId,
 		ProjectName:        "test name",
 		ProjectDescription: "test descrition",
 	}, nil
