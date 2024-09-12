@@ -18,6 +18,7 @@ func (s *HTTPServer) Start() error {
 	mux := http.NewServeMux()
 	eh := errorHandling
 	mux.Handle("GET /projects/{id}", eh(s.getProject))
+	mux.Handle("POST /projects", eh(s.createProject))
 
 	return http.ListenAndServe(s.Address, mux)
 }
