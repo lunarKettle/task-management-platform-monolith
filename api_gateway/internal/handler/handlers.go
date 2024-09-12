@@ -23,7 +23,6 @@ func (s *HTTPServer) getProject(w http.ResponseWriter, r *http.Request) error {
 
 	project, _ := s.client.GetProject(uint32(id))
 
-	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(project); err != nil {
 		err = fmt.Errorf("failed to encode project to JSON: %w", err)
 		return err
@@ -66,7 +65,6 @@ func (s *HTTPServer) createProject(w http.ResponseWriter, r *http.Request) error
 
 	id, err := s.client.CreateProject(project)
 
-	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(id); err != nil {
 		err = fmt.Errorf("failed to encode project to JSON: %w", err)
 		log.Print(err)

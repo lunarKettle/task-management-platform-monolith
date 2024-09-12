@@ -2,6 +2,7 @@ package handler
 
 import (
 	"api_gateway/internal/grpc_client"
+	"api_gateway/internal/middleware"
 	"net/http"
 )
 
@@ -20,5 +21,7 @@ func (s *HTTPServer) Start() error {
 	mux.Handle("GET /projects/{id}", eh(s.getProject))
 	mux.Handle("POST /projects", eh(s.createProject))
 
-	return http.ListenAndServe(s.Address, mux)
+	contentTypeMux := middleware.ContentTypeMiddleware(mux)
+
+	return http.ListenAndServe(s.Address, contentTypeMux)
 }
