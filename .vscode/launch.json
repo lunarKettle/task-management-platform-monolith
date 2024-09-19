@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch api_gateway",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/api_gateway/cmd/main.go",
+            "env": {},
+            "args": [],
+            "cwd": "${workspaceFolder}/api_gateway"
+        },
+        {
+            "name": "Launch project_management_service",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/project_management_service/cmd/main.go",
+            "env": {},
+            "args": [],
+            "cwd": "${workspaceFolder}/project_management_service"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Launch all microservices",
+            "configurations": ["Launch api_gateway", "Launch project_management_service"]
+        }
+    ]
+}
