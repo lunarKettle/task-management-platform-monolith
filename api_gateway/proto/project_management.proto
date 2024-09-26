@@ -9,6 +9,7 @@ option go_package = "../proto/";
 service ProjectManagementService {
   rpc GetProject (ProjectRequest) returns (ProjectResponse);
   rpc CreateProject (CreateProjectRequest) returns (CreateProjectResponse);
+  rpc UpdateProject (UpdateProjectRequest) returns (UpdateProjectResponse);
 }
 
 message ProjectRequest {
@@ -38,6 +39,23 @@ message CreateProjectRequest {
   string priority = 7;
   uint32 manager_id = 8;
   double budget = 9;
+}
+
+message CreateProjectResponse {
+  uint32 project_id = 1;
+}
+
+message UpdateProjectRequest {
+  uint32 project_id = 1;
+  string project_name = 2;
+  string project_description = 3;
+  google.protobuf.Timestamp start_date = 4;
+  google.protobuf.Timestamp planned_end_date = 5;
+  google.protobuf.Timestamp actual_end_date = 6;
+  string status = 7;
+  string priority = 8;
+  uint32 manager_id = 9;
+  double budget = 10;
 }
 
 message CreateProjectResponse {

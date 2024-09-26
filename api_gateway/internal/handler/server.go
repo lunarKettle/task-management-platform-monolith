@@ -20,6 +20,7 @@ func (s *HTTPServer) Start() error {
 	eh := errorHandling
 	mux.Handle("GET /projects/{id}", eh(s.getProject))
 	mux.Handle("POST /projects", eh(s.createProject))
+	mux.Handle("PUT /projects/{id}", eh(s.updateProject))
 
 	contentTypeMux := middleware.ContentTypeMiddleware(mux)
 

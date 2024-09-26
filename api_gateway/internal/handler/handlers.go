@@ -72,3 +72,18 @@ func (s *HTTPServer) createProject(w http.ResponseWriter, r *http.Request) error
 	}
 	return err
 }
+
+func (s *HTTPServer) updateProject(w http.ResponseWriter, r *http.Request) error {
+	var project models.Project
+	err := json.NewDecoder(r.Body).Decode(&project)
+	if err != nil {
+		err = fmt.Errorf("error while decoding request body: %w", err)
+		return err
+	}
+	if err := json.NewEncoder(w).Encode(project); err != nil {
+		err = fmt.Errorf("failed to encode project to JSON: %w", err)
+		log.Print(err)
+		return err
+	}
+	return err
+}
