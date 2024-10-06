@@ -52,7 +52,7 @@ func (g *GRPCClient) GetProject(id uint32) (models.Project, error) {
 		ActualEndDate:  r.GetActualEndDate().AsTime(),
 		Status:         r.GetStatus(),
 		Priority:       r.GetPriority(),
-		ManagerId:      r.GetManagerId(),
+		TeamId:         r.GetTeamId(),
 		Budget:         r.GetBudget(),
 	}
 	return project, err
@@ -69,7 +69,7 @@ func (g *GRPCClient) CreateProject(project models.Project) (uint32, error) {
 		ActualEndDate:      timestamppb.New(project.ActualEndDate),
 		Status:             project.Status,
 		Priority:           project.Priority,
-		ManagerId:          project.ManagerId,
+		TeamId:             project.TeamId,
 		Budget:             project.Budget,
 	})
 	if err != nil {

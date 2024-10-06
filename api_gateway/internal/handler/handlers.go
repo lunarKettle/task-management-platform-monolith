@@ -59,7 +59,7 @@ func (s *HTTPServer) createProject(w http.ResponseWriter, r *http.Request) error
 		log.Print(err)
 		return err
 	}
-	managerId, err := strconv.ParseUint(urlQuery.Get("manager_id"), 10, 32)
+	teamId, err := strconv.ParseUint(urlQuery.Get("team_id"), 10, 32)
 	if err != nil {
 		err = fmt.Errorf("failed to get parameter from request: %w", err)
 		log.Print(err)
@@ -80,7 +80,7 @@ func (s *HTTPServer) createProject(w http.ResponseWriter, r *http.Request) error
 		PlannedEndDate: plannedEndDate,
 		Status:         status,
 		Priority:       uint32(priority),
-		ManagerId:      uint32(managerId),
+		TeamId:         uint32(teamId),
 		Budget:         budget,
 	}
 

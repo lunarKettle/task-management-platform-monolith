@@ -52,7 +52,7 @@ func (s *GRPCServer) GetProject(ctx context.Context, request *pb.ProjectRequest)
 		ActualEndDate:      timestamppb.New(time.Now()),
 		Status:             "test status",
 		Priority:           123,
-		ManagerId:          123,
+		TeamId:             123,
 		Budget:             123123,
 	}, nil
 }
@@ -66,7 +66,7 @@ func (s *GRPCServer) CreateProject(ctx context.Context, r *pb.CreateProjectReque
 		ActualEndDate:  r.ActualEndDate.AsTime(),
 		Status:         r.Status,
 		Priority:       r.Priority,
-		ManagerId:      r.ManagerId,
+		TeamId:         r.TeamId,
 		Budget:         r.Budget,
 	}
 	id, err := s.projectRepository.AddProject(newProject)

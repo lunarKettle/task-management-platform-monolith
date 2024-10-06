@@ -11,6 +11,6 @@ type Project struct {
 	ActualEndDate  time.Time `db:"actual_end_date"`
 	Status         string    `db:"status"`
 	Priority       uint32    `db:"priority"`
-	ManagerId      uint32    `db:"manager_id"`
+	TeamId         uint32    `db:"team_id"`
 	Budget         float64   `db:"budget"`
 }
