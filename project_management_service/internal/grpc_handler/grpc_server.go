@@ -69,7 +69,7 @@ func (s *GRPCServer) CreateProject(ctx context.Context, r *pb.CreateProjectReque
 		TeamId:         r.TeamId,
 		Budget:         r.Budget,
 	}
-	id, err := s.projectRepository.AddProject(newProject)
+	id, err := s.projectRepository.Create(newProject)
 	if err != nil {
 		return nil, fmt.Errorf("error adding record to database: %w", err)
 	}
