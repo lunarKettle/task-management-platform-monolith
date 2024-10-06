@@ -12,7 +12,7 @@ type Project struct {
 	PlannedEndDate time.Time
 	ActualEndDate  time.Time
 	Status         string
-	Priority       string
+	Priority       uint32
 	ManagerId      uint32
 	Budget         float64
 }

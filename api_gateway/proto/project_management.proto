@@ -24,7 +24,7 @@ message ProjectResponse {
   google.protobuf.Timestamp planned_end_date = 5;
   google.protobuf.Timestamp actual_end_date = 6;
   string status = 7;
-  string priority = 8;
+  uint32 priority = 8;
   uint32 manager_id = 9;
   double budget = 10;
 }
@@ -36,7 +36,7 @@ message CreateProjectRequest {
   google.protobuf.Timestamp planned_end_date = 4;
   google.protobuf.Timestamp actual_end_date = 5;
   string status = 6;
-  string priority = 7;
+  uint32 priority = 7;
   uint32 manager_id = 8;
   double budget = 9;
 }
@@ -53,11 +53,11 @@ message UpdateProjectRequest {
   google.protobuf.Timestamp planned_end_date = 5;
   google.protobuf.Timestamp actual_end_date = 6;
   string status = 7;
-  string priority = 8;
+  uint32 priority = 8;
   uint32 manager_id = 9;
   double budget = 10;
 }
 
-message CreateProjectResponse {
+message UpdateProjectResponse {
   uint32 project_id = 1;
 }
