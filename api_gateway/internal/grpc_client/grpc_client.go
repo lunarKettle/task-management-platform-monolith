@@ -20,7 +20,7 @@ type GRPCClient struct {
 
 func NewGRPCClient() *GRPCClient {
 	const (
-		address = "localhost:50051"
+		address = "project_management_service:50051"
 	)
 	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {

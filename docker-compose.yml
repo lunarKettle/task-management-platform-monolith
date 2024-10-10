@@ -1,0 +1,54 @@
+services:
+  api_gateway:
+    build:
+      network: host
+      context: ./api_gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - project_management_service
+    environment:
+      PROJECT_MANAGEMENT_SERVICE: http://project_management_service:50051  # Взаимодействие с другим сервисом через его имя
+    networks:
+      - task_management_platform_app-network
+
+  project_management_service:
+    build: 
+      network: host
+      context: ./project_management_service
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: mydb
+    
+    networks:
+      - task_management_platform_app-network
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: project_management_service_db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - task_management_platform_app-network
+
+networks:
+  task_management_platform_app-network:
+    driver: bridge
+
+
+volumes:
+  db-data:
