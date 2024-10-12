@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
 	"project_management_service/internal/models"
 )
@@ -50,10 +51,17 @@ func (r *ProjectRepository) Delete(projectId uint32) error {
 }
 
 func (r *ProjectRepository) GetById(projectId uint32) (models.Project, error) {
-	query := "SELECT * FROM projects"
+	query := "SELECT * FROM projects WHERE id = $1"
 	var project models.Project
 	err := r.db.connection.QueryRow(query, projectId).Scan(&project.Id, &project.Name,
-		&project.StartDate, &project.PlannedEndDate, &project.ActualEndDate,
+		&project.Description, &project.StartDate, &project.PlannedEndDate, &project.ActualEndDate,
 		&project.Status, &project.Priority, &project.TeamId, &project.Budget)
-	return project, err
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return models.Project{}, fmt.Errorf("project with id %d not found: %w", projectId, err)
+		}
+		return models.Project{}, err
+	}
+
+	return project, nil
 }

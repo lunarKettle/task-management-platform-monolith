@@ -2,15 +2,18 @@ package grpc_handler
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net"
-	"time"
 
 	"project_management_service/internal/models"
 	"project_management_service/internal/repository"
 	pb "project_management_service/proto"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"google.golang.org/grpc"
@@ -43,17 +46,26 @@ func NewGRPCServer() *GRPCServer {
 }
 
 func (s *GRPCServer) GetProject(ctx context.Context, request *pb.ProjectRequest) (*pb.ProjectResponse, error) {
+	project, err := s.projectRepository.GetById(request.ProjectId)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "project with id %d not found", request.ProjectId)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get project: %v", err)
+	}
+
 	return &pb.ProjectResponse{
-		ProjectId:          request.ProjectId,
-		ProjectName:        "test name",
-		ProjectDescription: "test descrition",
-		StartDate:          timestamppb.New(time.Now()),
-		PlannedEndDate:     timestamppb.New(time.Now()),
-		ActualEndDate:      timestamppb.New(time.Now()),
-		Status:             "test status",
-		Priority:           123,
-		TeamId:             123,
-		Budget:             123123,
+		ProjectId:          project.Id,
+		ProjectName:        project.Name,
+		ProjectDescription: project.Description,
+		StartDate:          timestamppb.New(project.StartDate),
+		PlannedEndDate:     timestamppb.New(project.PlannedEndDate),
+		ActualEndDate:      timestamppb.New(project.ActualEndDate),
+		Status:             project.Status,
+		Priority:           project.Priority,
+		TeamId:             project.TeamId,
+		Budget:             project.Budget,
 	}, nil
 }
 

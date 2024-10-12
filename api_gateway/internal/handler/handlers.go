@@ -17,11 +17,15 @@ func (s *HTTPServer) getProject(w http.ResponseWriter, r *http.Request) error {
 	id, err := strconv.ParseUint(parts[len(parts)-1], 10, 32)
 
 	if err != nil {
-		err = fmt.Errorf("failed to get id from URL: %w", err)
+		http.Error(w, "invalid project id", http.StatusBadRequest)
 		return err
 	}
 
-	project, _ := s.client.GetProject(uint32(id))
+	project, err := s.client.GetProject(uint32(id))
+
+	if err != nil {
+		return err
+	}
 
 	if err := json.NewEncoder(w).Encode(project); err != nil {
 		err = fmt.Errorf("failed to encode project to JSON: %w", err)
