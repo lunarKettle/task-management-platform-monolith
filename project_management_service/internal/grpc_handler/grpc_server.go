@@ -56,17 +56,18 @@ func (s *GRPCServer) GetProject(ctx context.Context, request *pb.ProjectRequest)
 	}
 
 	return &pb.ProjectResponse{
-		ProjectId:          project.Id,
-		ProjectName:        project.Name,
-		ProjectDescription: project.Description,
-		StartDate:          timestamppb.New(project.StartDate),
-		PlannedEndDate:     timestamppb.New(project.PlannedEndDate),
-		ActualEndDate:      timestamppb.New(project.ActualEndDate),
-		Status:             project.Status,
-		Priority:           project.Priority,
-		TeamId:             project.TeamId,
-		Budget:             project.Budget,
-	}, nil
+		Project: &pb.Project{
+			ProjectId:          project.Id,
+			ProjectName:        project.Name,
+			ProjectDescription: project.Description,
+			StartDate:          timestamppb.New(project.StartDate),
+			PlannedEndDate:     timestamppb.New(project.PlannedEndDate),
+			ActualEndDate:      timestamppb.New(project.ActualEndDate),
+			Status:             project.Status,
+			Priority:           project.Priority,
+			TeamId:             project.TeamId,
+			Budget:             project.Budget,
+		}}, nil
 }
 
 func (s *GRPCServer) CreateProject(ctx context.Context, r *pb.CreateProjectRequest) (*pb.CreateProjectResponse, error) {

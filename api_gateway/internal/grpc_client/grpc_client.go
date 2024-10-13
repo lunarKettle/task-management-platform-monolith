@@ -2,11 +2,12 @@ package grpc_client
 
 import (
 	"api_gateway/internal/models"
-	pb "api_gateway/proto"
 	"context"
 	"fmt"
 	"log"
 	"time"
+
+	pb "api_gateway/proto"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -51,16 +52,16 @@ func (g *GRPCClient) GetProject(id uint32) (models.Project, error) {
 	}
 
 	project := models.Project{
-		Id:             r.GetProjectId(),
-		Name:           r.GetProjectName(),
-		Description:    r.GetProjectDescription(),
-		StartDate:      r.GetStartDate().AsTime(),
-		PlannedEndDate: r.GetPlannedEndDate().AsTime(),
-		ActualEndDate:  r.GetActualEndDate().AsTime(),
-		Status:         r.GetStatus(),
-		Priority:       r.GetPriority(),
-		TeamId:         r.GetTeamId(),
-		Budget:         r.GetBudget(),
+		Id:             r.Project.GetProjectId(),
+		Name:           r.Project.GetProjectName(),
+		Description:    r.Project.GetProjectDescription(),
+		StartDate:      r.Project.GetStartDate().AsTime(),
+		PlannedEndDate: r.Project.GetPlannedEndDate().AsTime(),
+		ActualEndDate:  r.Project.GetActualEndDate().AsTime(),
+		Status:         r.Project.GetStatus(),
+		Priority:       r.Project.GetPriority(),
+		TeamId:         r.Project.GetTeamId(),
+		Budget:         r.Project.GetBudget(),
 	}
 
 	return project, nil
