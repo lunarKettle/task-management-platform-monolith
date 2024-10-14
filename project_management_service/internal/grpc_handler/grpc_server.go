@@ -14,6 +14,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"google.golang.org/grpc"
@@ -45,12 +46,12 @@ func NewGRPCServer() *GRPCServer {
 	return server
 }
 
-func (s *GRPCServer) GetProject(ctx context.Context, request *pb.ProjectRequest) (*pb.ProjectResponse, error) {
-	project, err := s.projectRepository.GetById(request.ProjectId)
+func (s *GRPCServer) GetProject(ctx context.Context, r *pb.ProjectRequest) (*pb.ProjectResponse, error) {
+	project, err := s.projectRepository.GetById(r.ProjectId)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "project with id %d not found", request.ProjectId)
+			return nil, status.Errorf(codes.NotFound, "project with id %d not found", r.ProjectId)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to get project: %v", err)
 	}
@@ -87,4 +88,38 @@ func (s *GRPCServer) CreateProject(ctx context.Context, r *pb.CreateProjectReque
 		return nil, fmt.Errorf("error adding record to database: %w", err)
 	}
 	return &pb.CreateProjectResponse{ProjectId: id}, nil
+}
+
+func (s *GRPCServer) UpdateProject(ctx context.Context, r *pb.UpdateProjectRequest) (*emptypb.Empty, error) {
+	project := models.Project{
+		Id:             r.Project.ProjectId,
+		Name:           r.Project.ProjectName,
+		Description:    r.Project.ProjectDescription,
+		StartDate:      r.Project.StartDate.AsTime(),
+		PlannedEndDate: r.Project.PlannedEndDate.AsTime(),
+		ActualEndDate:  r.Project.ActualEndDate.AsTime(),
+		Status:         r.Project.Status,
+		Priority:       r.Project.Priority,
+		TeamId:         r.Project.TeamId,
+		Budget:         r.Project.Budget,
+	}
+	err := s.projectRepository.Update(project)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "project with id %d not found", r.Project.ProjectId)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to update project: %v", err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *GRPCServer) DeleteProject(ctx context.Context, r *pb.ProjectRequest) (*emptypb.Empty, error) {
+	err := s.projectRepository.Delete(r.ProjectId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "project with id %d not found", r.ProjectId)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to delete project: %v", err)
+	}
+	return &emptypb.Empty{}, nil
 }

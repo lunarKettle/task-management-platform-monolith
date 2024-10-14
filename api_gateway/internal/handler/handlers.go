@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func (s *HTTPServer) getProject(w http.ResponseWriter, r *http.Request) error {
@@ -35,61 +34,15 @@ func (s *HTTPServer) getProject(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (s *HTTPServer) createProject(w http.ResponseWriter, r *http.Request) error {
-	urlQuery := r.URL.Query()
-
-	name := urlQuery.Get("name")
-	description := urlQuery.Get("description")
-
-	timeLayout := "02-01-2006"
-	startDate, err := time.Parse(timeLayout, urlQuery.Get("start_date"))
+	var project models.Project
+	err := json.NewDecoder(r.Body).Decode(&project)
 	if err != nil {
-		err = fmt.Errorf("failed to get parameter from request: %w", err)
-		log.Print(err)
+		err = fmt.Errorf("error while decoding request body: %w", err)
 		return err
 	}
-	plannedEndDate, err := time.Parse(timeLayout, urlQuery.Get("planned_end_date"))
-	if err != nil {
-		err = fmt.Errorf("failed to get parameter from request: %w", err)
-		log.Print(err)
-		return err
-	}
-	//actualEndDate, err := time.Parse(timeLayout, urlQuery.Get("actual_end_date"))
-
-	status := urlQuery.Get("status")
-
-	priority, err := strconv.ParseUint(urlQuery.Get("priority"), 10, 32)
-	if err != nil {
-		err = fmt.Errorf("failed to get parameter from request: %w", err)
-		log.Print(err)
-		return err
-	}
-	teamId, err := strconv.ParseUint(urlQuery.Get("team_id"), 10, 32)
-	if err != nil {
-		err = fmt.Errorf("failed to get parameter from request: %w", err)
-		log.Print(err)
-		return err
-	}
-
-	budget, err := strconv.ParseFloat(strings.TrimSpace(urlQuery.Get("budget")), 64)
-	if err != nil {
-		err = fmt.Errorf("failed to get parameter from request: %w", err)
-		log.Print(err)
-		return err
-	}
-
-	project := models.Project{
-		Name:           name,
-		Description:    description,
-		StartDate:      startDate,
-		PlannedEndDate: plannedEndDate,
-		Status:         status,
-		Priority:       uint32(priority),
-		TeamId:         uint32(teamId),
-		Budget:         budget,
-	}
+	defer r.Body.Close()
 
 	id, err := s.client.CreateProject(project)
-
 	//TODO Add response type
 	if err := json.NewEncoder(w).Encode(id); err != nil {
 		err = fmt.Errorf("failed to encode project to JSON: %w", err)
@@ -100,16 +53,46 @@ func (s *HTTPServer) createProject(w http.ResponseWriter, r *http.Request) error
 }
 
 func (s *HTTPServer) updateProject(w http.ResponseWriter, r *http.Request) error {
+	if r.Method != http.MethodPut {
+		return fmt.Errorf("invalid request method: %s", r.Method)
+	}
+
 	var project models.Project
 	err := json.NewDecoder(r.Body).Decode(&project)
 	if err != nil {
 		err = fmt.Errorf("error while decoding request body: %w", err)
 		return err
 	}
-	if err := json.NewEncoder(w).Encode(project); err != nil {
-		err = fmt.Errorf("failed to encode project to JSON: %w", err)
-		log.Print(err)
+	defer r.Body.Close()
+
+	err = s.client.UpdateProject(project)
+
+	if err != nil {
 		return err
 	}
-	return err
+
+	w.WriteHeader(http.StatusNoContent)
+
+	return nil
+}
+
+func (s *HTTPServer) deleteProject(w http.ResponseWriter, r *http.Request) error {
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	id, err := strconv.ParseUint(parts[len(parts)-1], 10, 32)
+
+	if err != nil {
+		http.Error(w, "invalid project id", http.StatusBadRequest)
+		return err
+	}
+
+	err = s.client.DeleteProject(uint32(id))
+
+	if err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+	return nil
 }

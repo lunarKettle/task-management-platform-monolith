@@ -82,7 +82,41 @@ func (g *GRPCClient) CreateProject(project models.Project) (uint32, error) {
 		Budget:             project.Budget,
 	})
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		return 0, err
 	}
-	return r.GetProjectId(), err
+	return r.GetProjectId(), nil
+}
+
+func (g *GRPCClient) UpdateProject(project models.Project) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, err := g.client.UpdateProject(ctx, &pb.UpdateProjectRequest{
+		Project: &pb.Project{
+			ProjectId:          project.Id,
+			ProjectName:        project.Name,
+			ProjectDescription: project.Description,
+			StartDate:          timestamppb.New(project.StartDate),
+			PlannedEndDate:     timestamppb.New(project.PlannedEndDate),
+			ActualEndDate:      timestamppb.New(project.ActualEndDate),
+			Status:             project.Status,
+			Priority:           project.Priority,
+			TeamId:             project.TeamId,
+			Budget:             project.Budget,
+		}})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (g *GRPCClient) DeleteProject(id uint32) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, err := g.client.DeleteProject(ctx, &pb.ProjectRequest{ProjectId: id})
+	if err != nil {
+		return err
+	}
+	return nil
 }
