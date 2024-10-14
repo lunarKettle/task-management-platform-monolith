@@ -2,9 +2,14 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	_ "github.com/lib/pq"
+)
+
+var (
+	ErrNoRows = errors.New("no rows in result set")
 )
 
 type Database struct {

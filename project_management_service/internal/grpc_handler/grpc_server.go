@@ -2,7 +2,6 @@ package grpc_handler
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -50,7 +49,7 @@ func (s *GRPCServer) GetProject(ctx context.Context, r *pb.ProjectRequest) (*pb.
 	project, err := s.projectRepository.GetById(r.ProjectId)
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, repository.ErrNoRows) {
 			return nil, status.Errorf(codes.NotFound, "project with id %d not found", r.ProjectId)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to get project: %v", err)
@@ -105,7 +104,7 @@ func (s *GRPCServer) UpdateProject(ctx context.Context, r *pb.UpdateProjectReque
 	}
 	err := s.projectRepository.Update(project)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, repository.ErrNoRows) {
 			return nil, status.Errorf(codes.NotFound, "project with id %d not found", r.Project.ProjectId)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to update project: %v", err)
@@ -116,7 +115,7 @@ func (s *GRPCServer) UpdateProject(ctx context.Context, r *pb.UpdateProjectReque
 func (s *GRPCServer) DeleteProject(ctx context.Context, r *pb.ProjectRequest) (*emptypb.Empty, error) {
 	err := s.projectRepository.Delete(r.ProjectId)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, repository.ErrNoRows) {
 			return nil, status.Errorf(codes.NotFound, "project with id %d not found", r.ProjectId)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to delete project: %v", err)

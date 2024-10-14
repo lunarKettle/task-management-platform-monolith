@@ -35,6 +35,9 @@ func (r *ProjectRepository) Update(project models.Project) error {
 
 	_, err := r.db.connection.Exec(query, project.Name, project.Description, project.StartDate, project.PlannedEndDate, project.ActualEndDate, project.Status, project.Priority, project.TeamId, project.Budget, project.Id)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("project with id %d not found: %w", project.Id, ErrNoRows)
+		}
 		return fmt.Errorf("error updating project: %v", err)
 	}
 	return nil
@@ -45,6 +48,9 @@ func (r *ProjectRepository) Delete(projectId uint32) error {
 
 	_, err := r.db.connection.Exec(query, projectId)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("project with id %d not found: %w", projectId, ErrNoRows)
+		}
 		return fmt.Errorf("error deleting project: %v", err)
 	}
 	return nil
@@ -58,7 +64,7 @@ func (r *ProjectRepository) GetById(projectId uint32) (models.Project, error) {
 		&project.Status, &project.Priority, &project.TeamId, &project.Budget)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return models.Project{}, fmt.Errorf("project with id %d not found: %w", projectId, err)
+			return models.Project{}, fmt.Errorf("project with id %d not found: %w", projectId, ErrNoRows)
 		}
 		return models.Project{}, err
 	}
