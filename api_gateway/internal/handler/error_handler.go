@@ -24,6 +24,8 @@ func errorHandling(handler Handler) http.Handler {
 					http.Error(w, "internal server error", http.StatusInternalServerError)
 				case codes.InvalidArgument:
 					http.Error(w, "invalid argument", http.StatusBadRequest)
+				case codes.AlreadyExists:
+					http.Error(w, "already exists", http.StatusConflict)
 				default:
 					http.Error(w, "unexpected gRPC error", http.StatusInternalServerError)
 				}

@@ -7,17 +7,21 @@ import (
 )
 
 type HTTPServer struct {
-	Address string
-	client  *grpc_client.GRPCClient
+	Address    string
+	grpcClient *grpc_client.GRPCClient
 }
 
 func NewServer(addr string, c *grpc_client.GRPCClient) *HTTPServer {
-	return &HTTPServer{Address: addr, client: c}
+	return &HTTPServer{Address: addr, grpcClient: c}
 }
 
 func (s *HTTPServer) Start() error {
 	mux := http.NewServeMux()
 	eh := errorHandling
+
+	mux.Handle("POST /users/register", eh(s.registerUser))
+	mux.Handle("POST /users/login", eh(s.authenticate))
+
 	mux.Handle("GET /projects/{id}", eh(s.getProject))
 	mux.Handle("POST /projects", eh(s.createProject))
 	mux.Handle("PUT /projects", eh(s.updateProject))

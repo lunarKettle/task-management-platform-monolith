@@ -20,7 +20,7 @@ func (s *HTTPServer) getProject(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	project, err := s.client.GetProject(uint32(id))
+	project, err := s.grpcClient.GetProject(uint32(id))
 
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (s *HTTPServer) createProject(w http.ResponseWriter, r *http.Request) error
 	}
 	defer r.Body.Close()
 
-	id, err := s.client.CreateProject(project)
+	id, err := s.grpcClient.CreateProject(project)
 	//TODO Add response type
 	if err := json.NewEncoder(w).Encode(id); err != nil {
 		err = fmt.Errorf("failed to encode project to JSON: %w", err)
@@ -65,7 +65,7 @@ func (s *HTTPServer) updateProject(w http.ResponseWriter, r *http.Request) error
 	}
 	defer r.Body.Close()
 
-	err = s.client.UpdateProject(project)
+	err = s.grpcClient.UpdateProject(project)
 
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func (s *HTTPServer) deleteProject(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 
-	err = s.client.DeleteProject(uint32(id))
+	err = s.grpcClient.DeleteProject(uint32(id))
 
 	if err != nil {
 		return err
