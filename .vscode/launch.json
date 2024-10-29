@@ -20,12 +20,22 @@
             "env": {},
             "args": [],
             "cwd": "${workspaceFolder}/project_management_service"
+        },
+        {
+            "name": "Launch auth_service",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/auth_service/cmd/main.go",
+            "env": {},
+            "args": [],
+            "cwd": "${workspaceFolder}/auth_service"
         }
     ],
     "compounds": [
         {
             "name": "Launch all microservices",
-            "configurations": ["Launch api_gateway", "Launch project_management_service"]
+            "configurations": ["Launch api_gateway", "Launch project_management_service", "Launch auth_service"]
         }
     ]
 }
