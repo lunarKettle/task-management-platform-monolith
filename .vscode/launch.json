@@ -2,40 +2,40 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch api_gateway",
+            "name": "Launch api-gateway",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/api_gateway/cmd/main.go",
+            "program": "${workspaceFolder}/api-gateway/cmd/main.go",
             "env": {},
             "args": [],
-            "cwd": "${workspaceFolder}/api_gateway"
+            "cwd": "${workspaceFolder}/api-gateway"
         },
         {
-            "name": "Launch project_management_service",
+            "name": "Launch project-management-service",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/project_management_service/cmd/main.go",
+            "program": "${workspaceFolder}/project-management-service/cmd/main.go",
             "env": {},
             "args": [],
-            "cwd": "${workspaceFolder}/project_management_service"
+            "cwd": "${workspaceFolder}/project-management-service"
         },
         {
-            "name": "Launch auth_service",
+            "name": "Launch auth-service",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/auth_service/cmd/main.go",
+            "program": "${workspaceFolder}/auth-service/cmd/main.go",
             "env": {},
             "args": [],
-            "cwd": "${workspaceFolder}/auth_service"
+            "cwd": "${workspaceFolder}/auth-service"
         }
     ],
     "compounds": [
         {
             "name": "Launch all microservices",
-            "configurations": ["Launch api_gateway", "Launch project_management_service", "Launch auth_service"]
+            "configurations": ["Launch api-gateway", "Launch project-management-service", "Launch auth-service"]
         }
     ]
 }
