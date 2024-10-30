@@ -60,7 +60,7 @@ func (a *AuthUseCases) CreateUser(cmd *CreateUserCommand) (string, error) {
 		return "", fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	user := models.User{
+	user := &models.User{
 		Username:     cmd.username,
 		Email:        cmd.email,
 		PasswordHash: passwordHash,
@@ -73,6 +73,30 @@ func (a *AuthUseCases) CreateUser(cmd *CreateUserCommand) (string, error) {
 	}
 
 	token, err := a.tokenGenerator.GenerateToken(userId, cmd.role)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	return token, nil
+}
+
+func (a *AuthUseCases) AuthenticateUser(username string, password string) (string, error) {
+	user, err := a.repo.GetByUsername(username)
+
+	switch {
+	case err == nil:
+	case errors.Is(err, common.ErrNotFound):
+		return "", common.ErrInvalidCredentials
+	default:
+		return "", fmt.Errorf("failed to get user by username %q: %w", username, err)
+	}
+
+	err = bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(password))
+	if err != nil {
+		return "", common.ErrInvalidCredentials
+	}
+
+	token, err := a.tokenGenerator.GenerateToken(user.ID, user.Role)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate token: %w", err)
 	}

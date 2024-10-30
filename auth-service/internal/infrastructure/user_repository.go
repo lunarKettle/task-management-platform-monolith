@@ -16,7 +16,7 @@ func NewUserRepository(database *Database) *UserRepository {
 }
 
 // Create создаёт нового пользователя
-func (r *UserRepository) Create(user models.User) (uint32, error) {
+func (r *UserRepository) Create(user *models.User) (uint32, error) {
 	query := `INSERT INTO users (username, email, password_hash, role) 
               VALUES ($1, $2, $3, $4) RETURNING id`
 
@@ -30,34 +30,34 @@ func (r *UserRepository) Create(user models.User) (uint32, error) {
 }
 
 // GetById получает пользователя по его ID.
-func (r *UserRepository) GetById(id uint32) (models.User, error) {
+func (r *UserRepository) GetById(id uint32) (*models.User, error) {
 	query := `SELECT id, username, email, password_hash, role 
               FROM users WHERE id = $1`
 
-	var user models.User
+	user := &models.User{}
 	err := r.db.connection.QueryRow(query, id).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Role)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return models.User{}, common.ErrNotFound
+			return nil, common.ErrNotFound
 		}
-		return models.User{}, err
+		return nil, err
 	}
 
 	return user, nil
 }
 
 // GetByUsername получает пользователя по его Username.
-func (r *UserRepository) GetByUsername(username string) (models.User, error) {
+func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 	query := `SELECT id, username, email, password_hash, role 
               FROM users WHERE username = $1`
 
-	var user models.User
+	user := &models.User{}
 	err := r.db.connection.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Role)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return models.User{}, common.ErrNotFound
+			return nil, common.ErrNotFound
 		}
-		return models.User{}, err
+		return nil, err
 	}
 
 	return user, nil
@@ -84,7 +84,7 @@ func (r *UserRepository) DeleteById(id uint32) error {
 }
 
 // Update обновляет данные пользователя.
-func (r *UserRepository) Update(user models.User) error {
+func (r *UserRepository) Update(user *models.User) error {
 	query := `UPDATE users 
               SET username = $1, email = $2, password_hash = $3, role = $4, 
               WHERE id = $5`

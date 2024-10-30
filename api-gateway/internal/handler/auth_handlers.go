@@ -25,7 +25,6 @@ func (s *HTTPServer) registerUser(w http.ResponseWriter, r *http.Request) error 
 	}
 
 	grpcResponse, err := s.grpcClient.Register(grpcRequest)
-
 	if err != nil {
 		return fmt.Errorf("failed to register user: %w", err)
 
@@ -41,12 +40,11 @@ func (s *HTTPServer) registerUser(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (s *HTTPServer) authenticate(w http.ResponseWriter, r *http.Request) error {
-	var authUserReq dto.LoginUserRequestDTO
-	err := json.NewDecoder(r.Body).Decode(&authUserReq)
+	authUserReq, err := extractBasicAuth(r)
 	if err != nil {
-		return fmt.Errorf("error while decoding request body: %w", err)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return err
 	}
-	defer r.Body.Close()
 
 	grpcRequest := &pb.AuthRequest{
 		Username: authUserReq.Username,
@@ -54,6 +52,10 @@ func (s *HTTPServer) authenticate(w http.ResponseWriter, r *http.Request) error 
 	}
 
 	grpcResponse, err := s.grpcClient.Authenticate(grpcRequest)
+	if err != nil {
+		return fmt.Errorf("failed to authenticate user: %w", err)
+
+	}
 
 	reqUserResp := dto.LoginUserResponseDTO{
 		AccessToken: grpcResponse.Token,

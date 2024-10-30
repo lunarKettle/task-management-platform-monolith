@@ -3,6 +3,7 @@ package transport
 import (
 	"context"
 	"errors"
+	"log"
 
 	"github.com/lunarKettle/task-management-platform/auth-service/internal/common"
 	"github.com/lunarKettle/task-management-platform/auth-service/internal/usecases"
@@ -17,6 +18,7 @@ func (s *GRPCServer) Register(_ context.Context, r *proto.RegisterRequest) (*pro
 	token, err := s.usecases.CreateUser(cmd)
 
 	if err != nil {
+		log.Println(err)
 		if errors.Is(err, common.ErrAlreadyExists) {
 			return nil, status.Errorf(codes.AlreadyExists, "user already exists")
 		}
@@ -29,5 +31,17 @@ func (s *GRPCServer) Register(_ context.Context, r *proto.RegisterRequest) (*pro
 }
 
 func (s *GRPCServer) Authenticate(_ context.Context, r *proto.AuthRequest) (*proto.AuthResponse, error) {
-	return &proto.AuthResponse{}, nil
+	token, err := s.usecases.AuthenticateUser(r.Username, r.Password)
+
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, common.ErrInvalidCredentials) {
+			return nil, status.Errorf(codes.Unauthenticated, "invalid username or password")
+		}
+		return nil, status.Error(codes.Internal, "internal server error")
+	}
+
+	return &proto.AuthResponse{
+		Token: token,
+	}, nil
 }
