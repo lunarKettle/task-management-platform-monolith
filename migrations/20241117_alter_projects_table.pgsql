@@ -1,0 +1,5 @@
+ALTER TABLE projects
+ADD CONSTRAINT fk_team_id
+FOREIGN KEY (team_id)
+REFERENCES teams (id)
+ON DELETE SET NULL;
