@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 
-	userInfrastructure "github.com/lunarKettle/task-management-platform-monolith/internal/user/infrastructure"
-	userTransport "github.com/lunarKettle/task-management-platform-monolith/internal/user/transport"
-	userUsecases "github.com/lunarKettle/task-management-platform-monolith/internal/user/usecases"
+	userInfrastructure "github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/user/infrastructure"
+	userTransport "github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/user/transport"
+	userUsecases "github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/user/usecases"
 
-	projectInfrastructure "github.com/lunarKettle/task-management-platform-monolith/internal/project/infrastructure"
-	projectTransport "github.com/lunarKettle/task-management-platform-monolith/internal/project/transport"
-	projectUsecases "github.com/lunarKettle/task-management-platform-monolith/internal/project/usecases"
+	projectInfrastructure "github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/infrastructure"
+	projectTransport "github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/transport"
+	projectUsecases "github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/usecases"
 
 	"github.com/lunarKettle/task-management-platform-monolith/internal/server"
 

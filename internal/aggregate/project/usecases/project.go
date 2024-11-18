@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lunarKettle/task-management-platform-monolith/internal/project/models"
+	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/models"
 )
 
 type ProjectUseCases struct {

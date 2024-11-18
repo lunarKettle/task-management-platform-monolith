@@ -1,6 +1,6 @@
 package usecases
 
-import "github.com/lunarKettle/task-management-platform-monolith/internal/project/models"
+import "github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/models"
 
 type TeamRepository interface {
 	Create(team models.Team) (uint32, error)

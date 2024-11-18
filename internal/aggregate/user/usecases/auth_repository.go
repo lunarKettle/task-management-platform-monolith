@@ -1,7 +1,7 @@
 package usecases
 
 import (
-	"github.com/lunarKettle/task-management-platform-monolith/internal/user/models"
+	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/user/models"
 )
 
 type AuthRepository interface {

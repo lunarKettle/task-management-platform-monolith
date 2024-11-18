@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/lunarKettle/task-management-platform-monolith/internal/user/models/dto"
-	"github.com/lunarKettle/task-management-platform-monolith/internal/user/usecases"
+	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/user/models/dto"
+	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/user/usecases"
 )
 
 type AuthHandlers struct {
@@ -36,7 +36,6 @@ func (h *AuthHandlers) registerUser(w http.ResponseWriter, r *http.Request) erro
 
 	cmd := usecases.NewCreateUserCommand(regUserReq.Username, regUserReq.Email, regUserReq.Password, regUserReq.Role)
 	token, err := h.usecases.CreateUser(cmd)
-
 	if err != nil {
 		return fmt.Errorf("failed to register user: %v", err)
 	}

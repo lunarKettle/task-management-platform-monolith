@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lunarKettle/task-management-platform-monolith/internal/project/usecases"
+	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/usecases"
 )
 
 type ProjectHandlers struct {

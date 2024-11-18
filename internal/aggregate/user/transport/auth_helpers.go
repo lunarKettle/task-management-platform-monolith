@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/lunarKettle/task-management-platform-monolith/internal/user/models/dto"
+	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/user/models/dto"
 )
 
 func extractBasicAuth(r *http.Request) (*dto.LoginUserRequestDTO, error) {

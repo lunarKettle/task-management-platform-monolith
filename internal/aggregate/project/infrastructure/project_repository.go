@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/lunarKettle/task-management-platform-monolith/internal/project/models"
+	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/models"
 	"github.com/lunarKettle/task-management-platform-monolith/pkg/common"
 )
 
