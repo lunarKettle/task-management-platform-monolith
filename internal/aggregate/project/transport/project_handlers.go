@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/transport/dto"
 	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/usecases"
@@ -62,15 +61,7 @@ func (h *ProjectHandlers) getProject(w http.ResponseWriter, r *http.Request) err
 }
 
 func (h *ProjectHandlers) createProject(w http.ResponseWriter, r *http.Request) error {
-	var requestData struct {
-		Name           string    `json:"name"`
-		Description    string    `json:"description"`
-		PlannedEndDate time.Time `json:"planned_end_date"`
-		Status         string    `json:"status"`
-		Priority       uint32    `json:"priority"`
-		TeamId         uint32    `json:"team_id"`
-		Budget         float64   `json:"budget"`
-	}
+	var requestData dto.CreateProjectRequestDTO
 
 	err := json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
@@ -109,18 +100,7 @@ func (h *ProjectHandlers) updateProject(w http.ResponseWriter, r *http.Request) 
 		return fmt.Errorf("invalid request method: %s", r.Method)
 	}
 
-	var requestData struct {
-		ID             uint32    `json:"id"`
-		Name           string    `json:"name"`
-		Description    string    `json:"description"`
-		StartDate      time.Time `json:"start_date"`
-		PlannedEndDate time.Time `json:"planned_end_date"`
-		ActualEndDate  time.Time `json:"actual_end_date"`
-		Status         string    `json:"status"`
-		Priority       uint32    `json:"priority"`
-		TeamId         uint32    `json:"team_id"`
-		Budget         float64   `json:"budget"`
-	}
+	var requestData dto.UpdateProjectRequestDTO
 
 	err := json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {

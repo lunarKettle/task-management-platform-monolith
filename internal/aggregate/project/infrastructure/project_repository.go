@@ -79,17 +79,31 @@ func (r *ProjectRepository) DeleteProject(projectId uint32) error {
 
 func (r *ProjectRepository) GetProjectById(projectId uint32) (*models.Project, error) {
 	query := `
-	SELECT *
+	SELECT 
+    	p.id, 
+		p.name, 
+		p.description, 
+		p.start_date, 
+		p.planned_end_date, 
+		p.actual_end_date, 
+		p.status, p.priority,  
+    	p.team_id, 
+		t.name AS team_name, 
+		p.budget
 	FROM 
-		projects p
+    	projects p
 	LEFT JOIN
-		teams t
+    	teams t
 	ON
-		p.team_id = t.id
-	WHERE id = $1`
+    	p.team_id = t.id
+	WHERE 
+    	p.id = $1;`
+
 	project := &models.Project{}
 
-	err := r.db.QueryRow(query, projectId).Scan(
+	row := r.db.QueryRow(query, projectId)
+
+	err := row.Scan(
 		&project.Id,
 		&project.Name,
 		&project.Description,
@@ -99,6 +113,7 @@ func (r *ProjectRepository) GetProjectById(projectId uint32) (*models.Project, e
 		&project.Status,
 		&project.Priority,
 		&project.Team.ID,
+		&project.Team.Name,
 		&project.Budget)
 
 	if err != nil {
