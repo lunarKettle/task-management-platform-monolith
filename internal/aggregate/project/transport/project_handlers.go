@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/transport/dto"
 	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/usecases"
 )
 
@@ -29,6 +30,11 @@ func (h *ProjectHandlers) RegisterRoutes(mux *http.ServeMux, eh func(handler) ht
 	mux.Handle("POST /projects", eh(h.createProject))
 	mux.Handle("PUT /projects", eh(h.updateProject))
 	mux.Handle("DELETE /projects/{id}", eh(h.deleteProject))
+
+	mux.Handle("GET /teams/{id}", eh(h.getTeam))
+	mux.Handle("POST /teams", eh(h.createTeam))
+	mux.Handle("PUT /teams", eh(h.updateTeam))
+	mux.Handle("DELETE /teams/{id}", eh(h.deleteTeam))
 }
 
 func (h *ProjectHandlers) getProject(w http.ResponseWriter, r *http.Request) error {
@@ -159,6 +165,139 @@ func (h *ProjectHandlers) deleteProject(w http.ResponseWriter, r *http.Request) 
 
 	cmd := usecases.NewDeleteProjectCommand(uint32(id))
 	err = h.usecases.DeleteProject(cmd)
+
+	if err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+	return nil
+}
+
+func (h *ProjectHandlers) getTeam(w http.ResponseWriter, r *http.Request) error {
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	id, err := strconv.ParseUint(parts[len(parts)-1], 10, 32)
+
+	if err != nil {
+		http.Error(w, "invalid team id", http.StatusBadRequest)
+		return err
+	}
+
+	query := usecases.NewGetTeamByIDQuery(uint32(id))
+	team, err := h.usecases.GetTeamByID(query)
+
+	if err != nil {
+		return err
+	}
+
+	membersDTO := make([]dto.MemberDTO, len(team.Members))
+
+	for i, v := range team.Members {
+		membersDTO[i] = memberModelToDTO(v)
+	}
+
+	responseData := dto.GetTeamResponseDTO{
+		ID:      team.ID,
+		Name:    team.Name,
+		Members: membersDTO,
+	}
+
+	if err := json.NewEncoder(w).Encode(responseData); err != nil {
+		err = fmt.Errorf("failed to encode team to JSON: %w", err)
+		return err
+	}
+	return err
+}
+
+func (h *ProjectHandlers) createTeam(w http.ResponseWriter, r *http.Request) error {
+	var requestData dto.CreateTeamRequestDTO
+
+	err := json.NewDecoder(r.Body).Decode(&requestData)
+	if err != nil {
+		err = fmt.Errorf("error while decoding request body: %w", err)
+		return err
+	}
+	defer r.Body.Close()
+
+	members := make([]usecases.Member, len(requestData.Members))
+	for i, v := range requestData.Members {
+		members[i] = *usecases.NewMember(v.ID, v.Role)
+	}
+
+	cmd := usecases.NewCreateTeamCommand(
+		requestData.Name,
+		members,
+	)
+
+	id, err := h.usecases.CreateTeam(cmd)
+
+	// добавить добавление участников команды через usecase
+
+	if err != nil {
+		return err
+	}
+
+	response := map[string]interface{}{"id": id}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		err = fmt.Errorf("failed to encode team to JSON: %w", err)
+		log.Print(err)
+		return err
+	}
+	return err
+}
+
+func (h *ProjectHandlers) updateTeam(w http.ResponseWriter, r *http.Request) error {
+	if r.Method != http.MethodPut {
+		return fmt.Errorf("invalid request method: %s", r.Method)
+	}
+
+	var requestData dto.UpdateTeamRequestDTO
+
+	err := json.NewDecoder(r.Body).Decode(&requestData)
+	if err != nil {
+		err = fmt.Errorf("error while decoding request body: %w", err)
+		return err
+	}
+	defer r.Body.Close()
+
+	members := make([]usecases.Member, len(requestData.Members))
+	for i, v := range requestData.Members {
+		members[i] = *usecases.NewMember(v.ID, v.Role)
+	}
+
+	cmd := usecases.NewUpdateTeamCommand(
+		requestData.ID,
+		requestData.Name,
+		members,
+	)
+
+	// добавить изменение участников
+
+	err = h.usecases.UpdateTeam(cmd)
+
+	if err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+	return nil
+}
+
+func (h *ProjectHandlers) deleteTeam(w http.ResponseWriter, r *http.Request) error {
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	id, err := strconv.ParseUint(parts[len(parts)-1], 10, 32)
+
+	if err != nil {
+		http.Error(w, "invalid project id", http.StatusBadRequest)
+		return err
+	}
+
+	cmd := usecases.NewDeleteTeamCommand(uint32(id))
+	err = h.usecases.DeleteTeam(cmd)
 
 	if err != nil {
 		return err

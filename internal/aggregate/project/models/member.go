@@ -1,6 +1,6 @@
 package models
 
 type Member struct {
-	Id   uint32
+	ID   uint32
 	Role string
 }
