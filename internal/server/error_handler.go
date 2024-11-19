@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
@@ -12,23 +13,23 @@ type handler = func(http.ResponseWriter, *http.Request) error
 func errorHandling(handler handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := handler(w, r); err != nil {
-			switch err {
-			case common.ErrNotFound:
+			switch {
+			case errors.Is(err, common.ErrNotFound):
 				log.Printf("Error: %v", err)
 				http.Error(w, err.Error(), http.StatusNotFound)
-			case common.ErrAlreadyExists:
+			case errors.Is(err, common.ErrAlreadyExists):
 				log.Printf("Error: %v", err)
 				http.Error(w, err.Error(), http.StatusConflict)
-			case common.ErrInvalidCredentials:
+			case errors.Is(err, common.ErrInvalidCredentials):
 				log.Printf("Error: %v", err)
 				http.Error(w, err.Error(), http.StatusUnauthorized)
-			case common.ErrInvalidToken:
+			case errors.Is(err, common.ErrInvalidToken):
 				log.Printf("Error: %v", err)
 				http.Error(w, err.Error(), http.StatusUnauthorized)
-			case common.ErrUnexpectedSigningMethod:
+			case errors.Is(err, common.ErrUnexpectedSigningMethod):
 				log.Printf("Error: %v", err)
 				http.Error(w, err.Error(), http.StatusUnauthorized)
-			case common.ErrTokenNotValid:
+			case errors.Is(err, common.ErrTokenNotValid):
 				log.Printf("Error: %v", err)
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 			default:
