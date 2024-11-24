@@ -179,9 +179,10 @@ func (h *ProjectHandlers) getTeam(w http.ResponseWriter, r *http.Request) error 
 	}
 
 	responseData := dto.GetTeamResponseDTO{
-		ID:      team.ID,
-		Name:    team.Name,
-		Members: membersDTO,
+		ID:        team.ID,
+		Name:      team.Name,
+		Members:   membersDTO,
+		ManagerID: team.ManagerID,
 	}
 
 	if err := json.NewEncoder(w).Encode(responseData); err != nil {
@@ -209,6 +210,7 @@ func (h *ProjectHandlers) createTeam(w http.ResponseWriter, r *http.Request) err
 	cmd := usecases.NewCreateTeamCommand(
 		requestData.Name,
 		members,
+		requestData.ManagerID,
 	)
 
 	id, err := h.usecases.CreateTeam(cmd)
@@ -251,6 +253,7 @@ func (h *ProjectHandlers) updateTeam(w http.ResponseWriter, r *http.Request) err
 		requestData.ID,
 		requestData.Name,
 		members,
+		requestData.ManagerID,
 	)
 
 	// добавить изменение участников

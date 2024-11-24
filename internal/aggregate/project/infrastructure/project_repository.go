@@ -127,12 +127,12 @@ func (r *ProjectRepository) GetProjectById(projectId uint32) (*models.Project, e
 }
 
 func (r *ProjectRepository) CreateTeam(team *models.Team) (uint32, error) {
-	query := `INSERT INTO teams (name)
-		VALUES ($1)
+	query := `INSERT INTO teams (name, manager_id)
+		VALUES ($1, $2)
 		RETURNING id`
 
 	var id uint32
-	err := r.db.QueryRow(query, team.Name).Scan(&id)
+	err := r.db.QueryRow(query, team.Name, team.ManagerID).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("error inserting team: %v", err)
 	}
@@ -141,10 +141,10 @@ func (r *ProjectRepository) CreateTeam(team *models.Team) (uint32, error) {
 
 func (r *ProjectRepository) UpdateTeam(team *models.Team) error {
 	query := `UPDATE teams
-		SET name = $1
-		WHERE id = $2`
+		SET name = $1, manager_id = $2
+		WHERE id = $3`
 
-	_, err := r.db.Exec(query, team.Name, team.ID)
+	_, err := r.db.Exec(query, team.Name, team.ManagerID, team.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("team with id %d not found: %w", team.ID, common.ErrNotFound)
@@ -168,14 +168,24 @@ func (r *ProjectRepository) DeleteTeam(teamId uint32) error {
 }
 
 func (r *ProjectRepository) GetTeamById(teamId uint32) (*models.Team, error) {
-	query := `SELECT * 
+	query := `
+	SELECT 
+		id, name, manager_id
 	FROM 
 		teams
 	WHERE id=$1`
 
 	team := &models.Team{}
 
-	err := r.db.QueryRow(query, teamId).Scan(&team.ID, &team.Name)
+	var managerID sql.NullInt64
+
+	err := r.db.QueryRow(query, teamId).Scan(&team.ID, &team.Name, &managerID)
+
+	if managerID.Valid {
+		team.ManagerID = uint32(managerID.Int64)
+	} else {
+		team.ManagerID = 0
+	}
 
 	if err != nil {
 		if err == sql.ErrNoRows {

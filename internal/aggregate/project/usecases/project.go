@@ -189,21 +189,24 @@ func (p *ProjectUseCases) GetTeamByID(query *GetProjectByIDQuery) (*models.Team,
 
 // Команда для создания команды
 type CreateTeamCommand struct {
-	name    string
-	members []Member
+	name      string
+	members   []Member
+	managerID uint32
 }
 
-func NewCreateTeamCommand(name string, members []Member) *CreateTeamCommand {
+func NewCreateTeamCommand(name string, members []Member, managerID uint32) *CreateTeamCommand {
 	return &CreateTeamCommand{
-		name:    name,
-		members: members,
+		name:      name,
+		members:   members,
+		managerID: managerID,
 	}
 }
 
 func (p *ProjectUseCases) CreateTeam(cmd *CreateTeamCommand) (uint32, error) {
 	team := &models.Team{
-		Name:    cmd.name,
-		Members: mapMembersToModels(cmd.members),
+		Name:      cmd.name,
+		Members:   mapMembersToModels(cmd.members),
+		ManagerID: cmd.managerID,
 	}
 
 	id, err := p.repo.CreateTeam(team)
@@ -215,16 +218,22 @@ func (p *ProjectUseCases) CreateTeam(cmd *CreateTeamCommand) (uint32, error) {
 
 // Команда для обновления команды
 type UpdateTeamCommand struct {
-	id      uint32
-	name    string
-	members []Member
+	id        uint32
+	name      string
+	members   []Member
+	managerID uint32
 }
 
-func NewUpdateTeamCommand(id uint32, name string, members []Member) *UpdateTeamCommand {
+func NewUpdateTeamCommand(
+	id uint32,
+	name string,
+	members []Member,
+	managerID uint32) *UpdateTeamCommand {
 	return &UpdateTeamCommand{
-		id:      id,
-		name:    name,
-		members: members,
+		id:        id,
+		name:      name,
+		members:   members,
+		managerID: managerID,
 	}
 }
 
@@ -235,13 +244,14 @@ func (p *ProjectUseCases) UpdateTeam(cmd *UpdateTeamCommand) error {
 		if errors.Is(err, common.ErrNotFound) {
 			return fmt.Errorf("team with id %d is not found: %w", cmd.id, err)
 		}
-		return err
+		return fmt.Errorf("failed to get user with id %d: %w", cmd.id, err)
 	}
 
 	team := &models.Team{
-		ID:      cmd.id,
-		Name:    cmd.name,
-		Members: mapMembersToModels(cmd.members),
+		ID:        cmd.id,
+		Name:      cmd.name,
+		Members:   mapMembersToModels(cmd.members),
+		ManagerID: cmd.managerID,
 	}
 
 	if err := p.repo.UpdateTeam(team); err != nil {
