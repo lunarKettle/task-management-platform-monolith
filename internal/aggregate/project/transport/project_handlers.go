@@ -10,6 +10,7 @@ import (
 
 	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/transport/dto"
 	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/usecases"
+	"github.com/lunarKettle/task-management-platform-monolith/pkg/utils"
 )
 
 type ProjectHandlers struct {
@@ -37,16 +38,14 @@ func (h *ProjectHandlers) RegisterRoutes(mux *http.ServeMux, eh func(handler) ht
 }
 
 func (h *ProjectHandlers) getProject(w http.ResponseWriter, r *http.Request) error {
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	id, err := strconv.ParseUint(parts[len(parts)-1], 10, 32)
+	var id uint32
 
+	id, err := utils.ExtractIDFromPath(r.URL.Path)
 	if err != nil {
-		http.Error(w, "invalid project id", http.StatusBadRequest)
-		return err
+		return fmt.Errorf("failed to get id from url path: %w", err)
 	}
 
-	query := usecases.NewGetProjectByIDQuery(uint32(id))
+	query := usecases.NewGetProjectByIDQuery(id)
 	project, err := h.usecases.GetProjectByID(query)
 
 	if err != nil {
@@ -156,16 +155,14 @@ func (h *ProjectHandlers) deleteProject(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ProjectHandlers) getTeam(w http.ResponseWriter, r *http.Request) error {
-	path := r.URL.Path
-	parts := strings.Split(path, "/")
-	id, err := strconv.ParseUint(parts[len(parts)-1], 10, 32)
+	var id uint32
 
+	id, err := utils.ExtractIDFromPath(r.URL.Path)
 	if err != nil {
-		http.Error(w, "invalid team id", http.StatusBadRequest)
-		return err
+		return fmt.Errorf("failed to get id from url path: %w", err)
 	}
 
-	query := usecases.NewGetTeamByIDQuery(uint32(id))
+	query := usecases.NewGetTeamByIDQuery(id)
 	team, err := h.usecases.GetTeamByID(query)
 
 	if err != nil {
