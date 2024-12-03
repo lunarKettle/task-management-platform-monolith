@@ -54,8 +54,8 @@ func run() error {
 	authHandlers := userTransport.NewAuthHandlers(authUseCases)
 	projectHandler := projectTransport.NewProjectHandlers(projectUseCases)
 
-	server := server.NewServer(":8080")
-	fmt.Printf("Starting server at %s\n", server.Address)
+	server := server.NewServer(os.Getenv(ServerAddressEnv), jwtManager.ValidateToken)
+	fmt.Printf("Starting server at %s\n", server.Address())
 	if err := server.Start(authHandlers, projectHandler); err == nil {
 		fmt.Println("Error")
 	}
