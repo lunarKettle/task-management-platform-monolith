@@ -31,7 +31,7 @@ func extractBasicAuth(r *http.Request) (*dto.LoginUserRequestDTO, error) {
 	}
 
 	return &dto.LoginUserRequestDTO{
-		Username: credentials[0],
+		Email:    credentials[0],
 		Password: credentials[1],
 	}, nil
 }

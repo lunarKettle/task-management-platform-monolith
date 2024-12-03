@@ -18,16 +18,10 @@ func NewJWTManager(secretKey string) *JWTManager {
 	}
 }
 
-type Claims struct {
-	UserID uint32 `json:"sub"`
-	Role   string `json:"role"`
-	jwt.RegisteredClaims
-}
-
 func (m *JWTManager) GenerateToken(userID uint32, role string) (string, error) {
 	expirationTime := time.Now().Add(time.Hour * 1)
 
-	claims := &Claims{
+	claims := &common.Claims{
 		UserID: userID,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -46,8 +40,8 @@ func (m *JWTManager) GenerateToken(userID uint32, role string) (string, error) {
 	return tokenString, nil
 }
 
-func (m *JWTManager) ValidateToken(token string) (uint32, string, error) {
-	claims := &Claims{}
+func (m *JWTManager) ValidateToken(token string) (*common.Claims, error) {
+	claims := &common.Claims{}
 
 	tkn, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -57,12 +51,12 @@ func (m *JWTManager) ValidateToken(token string) (uint32, string, error) {
 	})
 
 	if err != nil {
-		return 0, "", common.ErrInvalidToken
+		return nil, common.ErrInvalidToken
 	}
 
 	if !tkn.Valid {
-		return 0, "", common.ErrTokenNotValid
+		return nil, common.ErrTokenNotValid
 	}
 
-	return claims.UserID, claims.Role, nil
+	return claims, nil
 }

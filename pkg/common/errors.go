@@ -9,4 +9,5 @@ var (
 	ErrInvalidToken            = errors.New("invalid token")
 	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
 	ErrTokenNotValid           = errors.New("token is not valid")
+	ErrForbidden               = errors.New("access forbidden")
 )

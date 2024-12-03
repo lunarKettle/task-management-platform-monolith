@@ -32,6 +32,9 @@ func errorHandling(handler handler) http.Handler {
 			case errors.Is(err, common.ErrTokenNotValid):
 				log.Printf("Error: %v", err)
 				http.Error(w, err.Error(), http.StatusUnauthorized)
+			case errors.Is(err, common.ErrForbidden):
+				log.Printf("Error: %v", err)
+				http.Error(w, err.Error(), http.StatusForbidden)
 			default:
 				log.Printf("Unexpected error: %v", err)
 				http.Error(w, "internal server error", http.StatusInternalServerError)

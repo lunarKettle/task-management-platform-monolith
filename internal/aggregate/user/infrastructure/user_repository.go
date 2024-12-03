@@ -63,6 +63,23 @@ func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 	return user, nil
 }
 
+// GetByEmail получает пользователя по его Username.
+func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
+	query := `SELECT id, username, email, password_hash, role 
+              FROM users WHERE email = $1`
+
+	user := &models.User{}
+	err := r.db.QueryRow(query, email).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, common.ErrNotFound
+		}
+		return nil, err
+	}
+
+	return user, nil
+}
+
 // DeleteById удаляет пользователя по его ID.
 func (r *UserRepository) DeleteById(id uint32) error {
 	query := `DELETE FROM users WHERE id = $1`

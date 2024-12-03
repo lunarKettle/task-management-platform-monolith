@@ -25,16 +25,16 @@ func NewProjectHandlers(usecases *usecases.ProjectUseCases) *ProjectHandlers {
 
 type handler = func(w http.ResponseWriter, r *http.Request) error
 
-func (h *ProjectHandlers) RegisterRoutes(mux *http.ServeMux, eh func(handler) http.Handler) {
-	mux.Handle("GET /projects/{id}", eh(h.getProject))
-	mux.Handle("POST /projects", eh(h.createProject))
-	mux.Handle("PUT /projects", eh(h.updateProject))
-	mux.Handle("DELETE /projects/{id}", eh(h.deleteProject))
+func (h *ProjectHandlers) RegisterRoutes(mux *http.ServeMux, errorHandler func(handler) http.Handler) {
+	mux.Handle("GET /projects/{id}", errorHandler(h.getProject))
+	mux.Handle("POST /projects", errorHandler(h.createProject))
+	mux.Handle("PUT /projects", errorHandler(h.updateProject))
+	mux.Handle("DELETE /projects/{id}", errorHandler(h.deleteProject))
 
-	mux.Handle("GET /teams/{id}", eh(h.getTeam))
-	mux.Handle("POST /teams", eh(h.createTeam))
-	mux.Handle("PUT /teams", eh(h.updateTeam))
-	mux.Handle("DELETE /teams/{id}", eh(h.deleteTeam))
+	mux.Handle("GET /teams/{id}", errorHandler(h.getTeam))
+	mux.Handle("POST /teams", errorHandler(h.createTeam))
+	mux.Handle("PUT /teams", errorHandler(h.updateTeam))
+	mux.Handle("DELETE /teams/{id}", errorHandler(h.deleteTeam))
 }
 
 func (h *ProjectHandlers) getProject(w http.ResponseWriter, r *http.Request) error {
@@ -46,12 +46,13 @@ func (h *ProjectHandlers) getProject(w http.ResponseWriter, r *http.Request) err
 	}
 
 	query := usecases.NewGetProjectByIDQuery(id)
-	project, err := h.usecases.GetProjectByID(query)
+	project, err := h.usecases.GetProjectByID(r.Context(), query)
 
 	if err != nil {
 		return err
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(project); err != nil {
 		err = fmt.Errorf("failed to encode project to JSON: %w", err)
 		return err
@@ -85,6 +86,7 @@ func (h *ProjectHandlers) createProject(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{"id": id}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		err = fmt.Errorf("failed to encode project to JSON: %w", err)
@@ -182,6 +184,7 @@ func (h *ProjectHandlers) getTeam(w http.ResponseWriter, r *http.Request) error 
 		ManagerID: team.ManagerID,
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(responseData); err != nil {
 		err = fmt.Errorf("failed to encode team to JSON: %w", err)
 		return err
@@ -218,6 +221,7 @@ func (h *ProjectHandlers) createTeam(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{"id": id}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		err = fmt.Errorf("failed to encode team to JSON: %w", err)

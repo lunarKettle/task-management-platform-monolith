@@ -88,7 +88,8 @@ func (r *ProjectRepository) GetProjectById(projectId uint32) (*models.Project, e
 		p.actual_end_date, 
 		p.status, p.priority,  
     	p.team_id, 
-		t.name AS team_name, 
+		t.name AS team_name,
+		t.manager_id,
 		p.budget
 	FROM 
     	projects p
@@ -114,6 +115,7 @@ func (r *ProjectRepository) GetProjectById(projectId uint32) (*models.Project, e
 		&project.Priority,
 		&project.Team.ID,
 		&project.Team.Name,
+		&project.Team.ManagerID,
 		&project.Budget)
 
 	if err != nil {
@@ -194,4 +196,19 @@ func (r *ProjectRepository) GetTeamById(teamId uint32) (*models.Team, error) {
 		return nil, err
 	}
 	return team, nil
+}
+
+func (r *ProjectRepository) GetTeamIdByUserID(userID uint32) (uint32, error) {
+	var teamID uint32
+	query := "SELECT team_id FROM users WHERE id = $1"
+
+	err := r.db.QueryRow(query, userID).Scan(&teamID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("no user found with id %d: %w", userID, common.ErrNotFound)
+		}
+		return 0, err
+	}
+
+	return teamID, nil
 }

@@ -54,6 +54,16 @@ func (a *AuthUseCases) CreateUser(cmd *CreateUserCommand) (string, error) {
 		return "", fmt.Errorf("failed to get user by username %q: %w", cmd.username, err)
 	}
 
+	_, err = a.repo.GetByEmail(cmd.email)
+
+	switch {
+	case errors.Is(err, common.ErrNotFound):
+	case err == nil:
+		return "", fmt.Errorf("%w: user with email %q already exists", common.ErrAlreadyExists, cmd.email)
+	default:
+		return "", fmt.Errorf("failed to get user by email %q: %w", cmd.email, err)
+	}
+
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(cmd.password), bcrypt.DefaultCost)
 
 	if err != nil {
@@ -80,15 +90,15 @@ func (a *AuthUseCases) CreateUser(cmd *CreateUserCommand) (string, error) {
 	return token, nil
 }
 
-func (a *AuthUseCases) AuthenticateUser(username string, password string) (string, error) {
-	user, err := a.repo.GetByUsername(username)
+func (a *AuthUseCases) AuthenticateUser(email string, password string) (string, error) {
+	user, err := a.repo.GetByEmail(email)
 
 	switch {
 	case err == nil:
 	case errors.Is(err, common.ErrNotFound):
 		return "", common.ErrInvalidCredentials
 	default:
-		return "", fmt.Errorf("failed to get user by username %q: %w", username, err)
+		return "", fmt.Errorf("failed to get user by email %q: %w", email, err)
 	}
 
 	err = bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(password))
@@ -105,10 +115,10 @@ func (a *AuthUseCases) AuthenticateUser(username string, password string) (strin
 }
 
 func (a *AuthUseCases) ValidateToken(token string) (uint32, string, error) {
-	userId, role, err := a.tokenManager.ValidateToken(token)
+	claims, err := a.tokenManager.ValidateToken(token)
 	if err != nil {
 		return 0, "", fmt.Errorf("failed to validate token: %w", err)
 	}
 
-	return userId, role, nil
+	return claims.UserID, claims.Role, nil
 }

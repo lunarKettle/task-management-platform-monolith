@@ -10,6 +10,6 @@ type RegisterUserRequestDTO struct {
 
 // LoginUserRequestDTO - данные для входа пользователя
 type LoginUserRequestDTO struct {
-	Username string `json:"username" validate:"required,email"`
+	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required"`
 }

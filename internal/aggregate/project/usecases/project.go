@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -8,6 +9,8 @@ import (
 	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/models"
 	"github.com/lunarKettle/task-management-platform-monolith/pkg/common"
 )
+
+const adminRole string = "admin"
 
 type ProjectUseCases struct {
 	repo ProjectRepository
@@ -28,11 +31,25 @@ func NewGetProjectByIDQuery(id uint32) *GetProjectByIDQuery {
 	return &GetProjectByIDQuery{id: id}
 }
 
-func (p *ProjectUseCases) GetProjectByID(query *GetProjectByIDQuery) (*models.Project, error) {
-	project, err := p.repo.GetProjectById(query.id)
+func (uc *ProjectUseCases) GetProjectByID(ctx context.Context, query *GetProjectByIDQuery) (*models.Project, error) {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	project, err := uc.repo.GetProjectById(query.id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get project by id: %w", err)
 	}
+
+	if claims.Role != adminRole {
+		teamID, err := uc.repo.GetTeamIdByUserID(claims.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get team by userID id: %w", err)
+		}
+
+		if project.Team.ID != teamID {
+			return nil, common.ErrForbidden
+		}
+	}
+
 	return project, nil
 }
 

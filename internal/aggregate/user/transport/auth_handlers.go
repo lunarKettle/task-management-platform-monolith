@@ -21,9 +21,9 @@ func NewAuthHandlers(usecases *usecases.AuthUseCases) *AuthHandlers {
 
 type handler = func(w http.ResponseWriter, r *http.Request) error
 
-func (h *AuthHandlers) RegisterRoutes(mux *http.ServeMux, eh func(handler) http.Handler) {
-	mux.Handle("POST /users/register", eh(h.registerUser))
-	mux.Handle("POST /users/login", eh(h.authenticate))
+func (h *AuthHandlers) RegisterRoutes(mux *http.ServeMux, errorHandler func(handler) http.Handler) {
+	mux.Handle("POST /register", errorHandler(h.registerUser))
+	mux.Handle("POST /login", errorHandler(h.authenticate))
 }
 
 func (h *AuthHandlers) registerUser(w http.ResponseWriter, r *http.Request) error {
@@ -43,6 +43,8 @@ func (h *AuthHandlers) registerUser(w http.ResponseWriter, r *http.Request) erro
 	reqUserResp := dto.RegisterUserResponseDTO{
 		AccessToken: token,
 	}
+
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(reqUserResp); err != nil {
 		return fmt.Errorf("failed to encode response to JSON: %w", err)
 	}
@@ -56,16 +58,18 @@ func (h *AuthHandlers) authenticate(w http.ResponseWriter, r *http.Request) erro
 		return fmt.Errorf("basic auth header is missing or malformed: %w", err)
 	}
 
-	token, err := h.usecases.AuthenticateUser(authUserReq.Username, authUserReq.Password)
+	token, err := h.usecases.AuthenticateUser(authUserReq.Email, authUserReq.Password)
 
 	if err != nil {
 		http.Error(w, "invalid username or password", http.StatusUnauthorized)
-		return fmt.Errorf("failed to authenticate user: %w", err)
+		return nil
 	}
 
 	reqUserResp := dto.LoginUserResponseDTO{
 		AccessToken: token,
 	}
+
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(reqUserResp); err != nil {
 		return fmt.Errorf("failed to encode response to JSON: %w", err)
 	}
