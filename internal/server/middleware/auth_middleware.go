@@ -1,16 +1,24 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/lunarKettle/task-management-platform-monolith/pkg/common"
 )
 
-func AuthMiddleware(next http.Handler) http.Handler {
+type tokenParser = func(string) (*common.Claims, error)
+
+var noAuthPaths = map[string]struct{}{
+	"/login":    {},
+	"/register": {},
+}
+
+func AuthMiddleware(next http.Handler, tokenParser tokenParser) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/api/auth") || strings.HasPrefix(r.URL.Path, "/api/register") {
+		if _, ok := noAuthPaths[r.URL.Path]; ok {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -21,20 +29,18 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-			// секретный ключ надо брать из .env
-			return []byte("your_secret_key"), nil
-		})
+		token := strings.TrimPrefix(tokenString, "Bearer ")
 
-		if err != nil || !token.Valid {
+		claims, err := tokenParser(token)
+
+		if err != nil {
+			fmt.Print(err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		ctx := context.WithValue(r.Context(), common.ContextKeyClaims, claims)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

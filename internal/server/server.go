@@ -4,16 +4,25 @@ import (
 	"net/http"
 
 	"github.com/lunarKettle/task-management-platform-monolith/internal/server/middleware"
+	"github.com/lunarKettle/task-management-platform-monolith/pkg/common"
 )
 
+type tokenParser = func(string) (*common.Claims, error)
+
 type HTTPServer struct {
-	Address string
+	address     string
+	tokenParser tokenParser
 }
 
-func NewServer(addr string) *HTTPServer {
+func NewServer(addr string, tokenParser tokenParser) *HTTPServer {
 	return &HTTPServer{
-		Address: addr,
+		address:     addr,
+		tokenParser: tokenParser,
 	}
+}
+
+func (s *HTTPServer) Address() string {
+	return s.address
 }
 
 func (s *HTTPServer) Start(handlers ...Handler) error {
@@ -23,7 +32,11 @@ func (s *HTTPServer) Start(handlers ...Handler) error {
 		handler.RegisterRoutes(mux, errorHandling)
 	}
 
-	contentTypeMux := middleware.ContentTypeMiddleware(mux)
+	authMux := middleware.AuthMiddleware(mux, s.tokenParser)
 
-	return http.ListenAndServe(s.Address, contentTypeMux)
+	authAndLoggingMux := middleware.LoggingMiddleware(authMux)
+
+	finalMux := middleware.CORSMiddleware(authAndLoggingMux)
+
+	return http.ListenAndServe(s.address, finalMux)
 }
