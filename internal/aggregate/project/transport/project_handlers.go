@@ -80,7 +80,7 @@ func (h *ProjectHandlers) createProject(w http.ResponseWriter, r *http.Request) 
 		requestData.Budget,
 	)
 
-	id, err := h.usecases.CreateProject(cmd)
+	id, err := h.usecases.CreateProject(r.Context(), cmd)
 
 	if err != nil {
 		return err
@@ -123,7 +123,7 @@ func (h *ProjectHandlers) updateProject(w http.ResponseWriter, r *http.Request) 
 		requestData.Budget,
 	)
 
-	err = h.usecases.UpdateProject(cmd)
+	err = h.usecases.UpdateProject(r.Context(), cmd)
 
 	if err != nil {
 		return err
@@ -145,7 +145,7 @@ func (h *ProjectHandlers) deleteProject(w http.ResponseWriter, r *http.Request) 
 	}
 
 	cmd := usecases.NewDeleteProjectCommand(uint32(id))
-	err = h.usecases.DeleteProject(cmd)
+	err = h.usecases.DeleteProject(r.Context(), cmd)
 
 	if err != nil {
 		return err
@@ -213,7 +213,7 @@ func (h *ProjectHandlers) createTeam(w http.ResponseWriter, r *http.Request) err
 		requestData.ManagerID,
 	)
 
-	id, err := h.usecases.CreateTeam(cmd)
+	id, err := h.usecases.CreateTeam(r.Context(), cmd)
 
 	// добавить добавление участников команды через usecase
 
@@ -259,7 +259,7 @@ func (h *ProjectHandlers) updateTeam(w http.ResponseWriter, r *http.Request) err
 
 	// добавить изменение участников
 
-	err = h.usecases.UpdateTeam(cmd)
+	err = h.usecases.UpdateTeam(r.Context(), cmd)
 
 	if err != nil {
 		return err
@@ -281,7 +281,7 @@ func (h *ProjectHandlers) deleteTeam(w http.ResponseWriter, r *http.Request) err
 	}
 
 	cmd := usecases.NewDeleteTeamCommand(uint32(id))
-	err = h.usecases.DeleteTeam(cmd)
+	err = h.usecases.DeleteTeam(r.Context(), cmd)
 
 	if err != nil {
 		return err

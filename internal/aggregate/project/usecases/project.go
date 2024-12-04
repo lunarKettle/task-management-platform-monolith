@@ -83,7 +83,13 @@ func NewCreateProjectCommand(
 	}
 }
 
-func (p *ProjectUseCases) CreateProject(cmd *CreateProjectCommand) (uint32, error) {
+func (p *ProjectUseCases) CreateProject(ctx context.Context, cmd *CreateProjectCommand) (uint32, error) {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	if claims.Role != adminRole {
+		return 0, common.ErrForbidden
+	}
+
 	project := &models.Project{
 		Name:           cmd.name,
 		Description:    cmd.description,
@@ -142,7 +148,13 @@ func NewUpdateProjectCommand(
 	}
 }
 
-func (p *ProjectUseCases) UpdateProject(cmd *UpdateProjectCommand) error {
+func (p *ProjectUseCases) UpdateProject(ctx context.Context, cmd *UpdateProjectCommand) error {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	if claims.Role != adminRole {
+		return common.ErrForbidden
+	}
+
 	_, err := p.repo.GetProjectById(cmd.id)
 
 	if err != nil {
@@ -180,7 +192,13 @@ func NewDeleteProjectCommand(id uint32) *DeleteProjectCommand {
 	return &DeleteProjectCommand{id: id}
 }
 
-func (p *ProjectUseCases) DeleteProject(cmd *DeleteProjectCommand) error {
+func (p *ProjectUseCases) DeleteProject(ctx context.Context, cmd *DeleteProjectCommand) error {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	if claims.Role != adminRole {
+		return common.ErrForbidden
+	}
+
 	if err := p.repo.DeleteProject(cmd.id); err != nil {
 		return fmt.Errorf("failed to delete project: %w", err)
 	}
@@ -219,7 +237,13 @@ func NewCreateTeamCommand(name string, members []Member, managerID uint32) *Crea
 	}
 }
 
-func (p *ProjectUseCases) CreateTeam(cmd *CreateTeamCommand) (uint32, error) {
+func (p *ProjectUseCases) CreateTeam(ctx context.Context, cmd *CreateTeamCommand) (uint32, error) {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	if claims.Role != adminRole {
+		return 0, common.ErrForbidden
+	}
+
 	team := &models.Team{
 		Name:      cmd.name,
 		Members:   mapMembersToModels(cmd.members),
@@ -254,7 +278,13 @@ func NewUpdateTeamCommand(
 	}
 }
 
-func (p *ProjectUseCases) UpdateTeam(cmd *UpdateTeamCommand) error {
+func (p *ProjectUseCases) UpdateTeam(ctx context.Context, cmd *UpdateTeamCommand) error {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	if claims.Role != adminRole {
+		return common.ErrForbidden
+	}
+
 	_, err := p.repo.GetTeamById(cmd.id)
 
 	if err != nil {
@@ -286,7 +316,13 @@ func NewDeleteTeamCommand(id uint32) *DeleteTeamCommand {
 	return &DeleteTeamCommand{id: id}
 }
 
-func (p *ProjectUseCases) DeleteTeam(cmd *DeleteTeamCommand) error {
+func (p *ProjectUseCases) DeleteTeam(ctx context.Context, cmd *DeleteTeamCommand) error {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	if claims.Role != adminRole {
+		return common.ErrForbidden
+	}
+
 	if err := p.repo.DeleteTeam(cmd.id); err != nil {
 		return fmt.Errorf("failed to delete team: %w", err)
 	}
