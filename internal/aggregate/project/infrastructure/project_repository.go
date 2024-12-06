@@ -212,3 +212,123 @@ func (r *ProjectRepository) GetTeamIdByUserID(userID uint32) (uint32, error) {
 
 	return teamID, nil
 }
+
+func (r *ProjectRepository) CreateTask(task *models.Task) (uint32, error) {
+	query := `INSERT INTO tasks (description, employee_id, project_id)
+		VALUES ($1, $2, $3)
+		RETURNING id`
+
+	var id uint32
+	err := r.db.QueryRow(query,
+		task.Description,
+		task.EmployeeID,
+		task.ProjectID).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("error inserting task: %v", err)
+	}
+	return id, nil
+}
+
+func (r *ProjectRepository) UpdateTask(task *models.Task) error {
+	query := `UPDATE tasks
+		SET description = $1, employee_id = $2, project_id = $3
+		WHERE id = $4`
+
+	_, err := r.db.Exec(query,
+		task.Description,
+		task.EmployeeID,
+		task.ProjectID,
+		task.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("task with id %d not found: %w", task.ID, common.ErrNotFound)
+		}
+		return fmt.Errorf("error updating task: %v", err)
+	}
+	return nil
+}
+
+func (r *ProjectRepository) DeleteTask(taskID uint32) error {
+	query := `DELETE FROM tasks WHERE id = $1`
+
+	_, err := r.db.Exec(query, taskID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("task with id %d not found: %w", taskID, common.ErrNotFound)
+		}
+		return fmt.Errorf("error deleting task: %v", err)
+	}
+	return nil
+}
+
+func (r *ProjectRepository) GetTaskById(taskID uint32) (*models.Task, error) {
+	query := `
+	SELECT 
+    	t.id, 
+		t.description, 
+		t.employee_id, 
+		t.project_id
+	FROM 
+    	tasks t
+	WHERE 
+    	t.id = $1;`
+
+	task := &models.Task{}
+
+	row := r.db.QueryRow(query, taskID)
+
+	err := row.Scan(
+		&task.ID,
+		&task.Description,
+		&task.EmployeeID,
+		&task.ProjectID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("task with id %d not found: %w", taskID, common.ErrNotFound)
+		}
+		return nil, err
+	}
+
+	return task, nil
+}
+
+func (r *ProjectRepository) GetTasksByEmployeeID(employeeID uint32) ([]*models.Task, error) {
+	query := `
+	SELECT 
+    	t.id, 
+		t.description, 
+		t.employee_id, 
+		t.project_id
+	FROM 
+    	tasks t
+	WHERE 
+    	t.employee_id = $1;`
+
+	rows, err := r.db.Query(query, employeeID)
+	if err != nil {
+		return nil, fmt.Errorf("error querying tasks for employee_id %d: %v", employeeID, err)
+	}
+	defer rows.Close()
+
+	var tasks []*models.Task
+	for rows.Next() {
+		task := &models.Task{}
+		err := rows.Scan(
+			&task.ID,
+			&task.Description,
+			&task.EmployeeID,
+			&task.ProjectID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning task row: %v", err)
+		}
+		tasks = append(tasks, task)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over rows: %v", err)
+	}
+
+	return tasks, nil
+}

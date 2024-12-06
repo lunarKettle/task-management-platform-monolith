@@ -13,4 +13,10 @@ type ProjectRepository interface {
 	DeleteTeam(teamID uint32) error
 	GetTeamById(teamID uint32) (*models.Team, error)
 	GetTeamIdByUserID(userID uint32) (uint32, error)
+
+	CreateTask(task *models.Task) (uint32, error)
+	UpdateTask(task *models.Task) error
+	DeleteTask(taskID uint32) error
+	GetTaskById(taskID uint32) (*models.Task, error)
+	GetTasksByEmployeeID(employeeID uint32) ([]*models.Task, error)
 }

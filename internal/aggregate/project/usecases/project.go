@@ -328,3 +328,142 @@ func (p *ProjectUseCases) DeleteTeam(ctx context.Context, cmd *DeleteTeamCommand
 	}
 	return nil
 }
+
+// Запрос для получения задачи по ID
+type GetTaskByIDQuery struct {
+	id uint32
+}
+
+func NewGetTaskByIDQuery(id uint32) *GetTaskByIDQuery {
+	return &GetTaskByIDQuery{id: id}
+}
+
+func (uc *ProjectUseCases) GetTaskByID(ctx context.Context, query *GetTaskByIDQuery) (*models.Task, error) {
+	task, err := uc.repo.GetTaskById(query.id)
+	if err != nil {
+		if errors.Is(err, common.ErrNotFound) {
+			return nil, fmt.Errorf("task with id %d is not found: %w", query.id, err)
+		}
+		return nil, fmt.Errorf("failed to get task by id: %w", err)
+	}
+	return task, nil
+}
+
+// Команда для создания задачи
+type CreateTaskCommand struct {
+	description string
+	employeeID  uint32
+	projectID   uint32
+}
+
+func NewCreateTaskCommand(description string, employeeID, projectID uint32) *CreateTaskCommand {
+	return &CreateTaskCommand{
+		description: description,
+		employeeID:  employeeID,
+		projectID:   projectID,
+	}
+}
+
+func (uc *ProjectUseCases) CreateTask(ctx context.Context, cmd *CreateTaskCommand) (uint32, error) {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	if claims.Role != adminRole {
+		return 0, common.ErrForbidden
+	}
+
+	task := &models.Task{
+		Description: cmd.description,
+		EmployeeID:  cmd.employeeID,
+		ProjectID:   cmd.projectID,
+	}
+
+	id, err := uc.repo.CreateTask(task)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create task: %w", err)
+	}
+	return id, nil
+}
+
+// Команда для обновления задачи
+type UpdateTaskCommand struct {
+	id          uint32
+	description string
+	employeeID  uint32
+	projectID   uint32
+}
+
+func NewUpdateTaskCommand(id uint32, description string, employeeID, projectID uint32) *UpdateTaskCommand {
+	return &UpdateTaskCommand{
+		id:          id,
+		description: description,
+		employeeID:  employeeID,
+		projectID:   projectID,
+	}
+}
+
+func (uc *ProjectUseCases) UpdateTask(ctx context.Context, cmd *UpdateTaskCommand) error {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	if claims.Role != adminRole {
+		return common.ErrForbidden
+	}
+
+	_, err := uc.repo.GetTaskById(cmd.id)
+	if err != nil {
+		if errors.Is(err, common.ErrNotFound) {
+			return fmt.Errorf("task with id %d is not found: %w", cmd.id, err)
+		}
+		return fmt.Errorf("failed to get task with id %d: %w", cmd.id, err)
+	}
+
+	task := &models.Task{
+		ID:          cmd.id,
+		Description: cmd.description,
+		EmployeeID:  cmd.employeeID,
+		ProjectID:   cmd.projectID,
+	}
+
+	if err := uc.repo.UpdateTask(task); err != nil {
+		return fmt.Errorf("failed to update task: %w", err)
+	}
+	return nil
+}
+
+// Команда для удаления задачи
+type DeleteTaskCommand struct {
+	id uint32
+}
+
+func NewDeleteTaskCommand(id uint32) *DeleteTaskCommand {
+	return &DeleteTaskCommand{id: id}
+}
+
+func (uc *ProjectUseCases) DeleteTask(ctx context.Context, cmd *DeleteTaskCommand) error {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	if claims.Role != adminRole {
+		return common.ErrForbidden
+	}
+
+	if err := uc.repo.DeleteTask(cmd.id); err != nil {
+		return fmt.Errorf("failed to delete task: %w", err)
+	}
+	return nil
+}
+
+// Запрос для получения задач сотрудника
+type GetTasksByEmployeeIDQuery struct {
+	employeeID uint32
+}
+
+func NewGetTasksByEmployeeIDQuery(employeeID uint32) *GetTasksByEmployeeIDQuery {
+	return &GetTasksByEmployeeIDQuery{employeeID: employeeID}
+}
+
+func (uc *ProjectUseCases) GetTasksByEmployeeID(ctx context.Context, query *GetTasksByEmployeeIDQuery) ([]*models.Task, error) {
+	tasks, err := uc.repo.GetTasksByEmployeeID(query.employeeID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tasks for employee id %d: %w", query.employeeID, err)
+	}
+	return tasks, nil
+}

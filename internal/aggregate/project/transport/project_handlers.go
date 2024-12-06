@@ -35,6 +35,11 @@ func (h *ProjectHandlers) RegisterRoutes(mux *http.ServeMux, errorHandler func(h
 	mux.Handle("POST /teams", errorHandler(h.createTeam))
 	mux.Handle("PUT /teams", errorHandler(h.updateTeam))
 	mux.Handle("DELETE /teams/{id}", errorHandler(h.deleteTeam))
+
+	mux.Handle("GET /tasks/{id}", errorHandler(h.getTask))
+	mux.Handle("POST /tasks", errorHandler(h.createTask))
+	mux.Handle("PUT /tasks", errorHandler(h.updateTask))
+	mux.Handle("DELETE /tasks/{id}", errorHandler(h.deleteTask))
 }
 
 func (h *ProjectHandlers) getProject(w http.ResponseWriter, r *http.Request) error {
@@ -289,5 +294,91 @@ func (h *ProjectHandlers) deleteTeam(w http.ResponseWriter, r *http.Request) err
 
 	w.WriteHeader(http.StatusNoContent)
 
+	return nil
+}
+
+func (h *ProjectHandlers) getTask(w http.ResponseWriter, r *http.Request) error {
+	id, err := utils.ExtractIDFromPath(r.URL.Path)
+	if err != nil {
+		return fmt.Errorf("failed to extract id: %w", err)
+	}
+
+	query := usecases.NewGetTaskByIDQuery(id)
+	task, err := h.usecases.GetTaskByID(r.Context(), query)
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(task); err != nil {
+		return fmt.Errorf("failed to encode task to JSON: %w", err)
+	}
+
+	return nil
+}
+
+func (h *ProjectHandlers) createTask(w http.ResponseWriter, r *http.Request) error {
+	var requestData dto.CreateTaskRequestDTO
+
+	if err := json.NewDecoder(r.Body).Decode(&requestData); err != nil {
+		return fmt.Errorf("error decoding request body: %w", err)
+	}
+	defer r.Body.Close()
+
+	cmd := usecases.NewCreateTaskCommand(
+		requestData.Description,
+		requestData.EmployeeID,
+		requestData.ProjectID,
+	)
+
+	id, err := h.usecases.CreateTask(r.Context(), cmd)
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{"id": id}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		return fmt.Errorf("failed to encode response: %w", err)
+	}
+
+	return nil
+}
+
+func (h *ProjectHandlers) updateTask(w http.ResponseWriter, r *http.Request) error {
+	var requestData dto.UpdateTaskRequestDTO
+
+	if err := json.NewDecoder(r.Body).Decode(&requestData); err != nil {
+		return fmt.Errorf("error decoding request body: %w", err)
+	}
+	defer r.Body.Close()
+
+	cmd := usecases.NewUpdateTaskCommand(
+		requestData.ID,
+		requestData.Description,
+		requestData.EmployeeID,
+		requestData.ProjectID,
+	)
+
+	if err := h.usecases.UpdateTask(r.Context(), cmd); err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (h *ProjectHandlers) deleteTask(w http.ResponseWriter, r *http.Request) error {
+	id, err := utils.ExtractIDFromPath(r.URL.Path)
+	if err != nil {
+		return fmt.Errorf("failed to extract id: %w", err)
+	}
+
+	cmd := usecases.NewDeleteTaskCommand(id)
+	if err := h.usecases.DeleteTask(r.Context(), cmd); err != nil {
+		return err
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
