@@ -22,6 +22,34 @@ func NewProjectUseCases(repo ProjectRepository) *ProjectUseCases {
 	}
 }
 
+// Запрос для получения всех проектов
+func (uc *ProjectUseCases) GetAllProjects(ctx context.Context) ([]*models.Project, error) {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	projects, err := uc.repo.GetAllProjects()
+	var result []*models.Project
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all projects: %w", err)
+	}
+
+	if claims.Role != adminRole {
+		teamID, err := uc.repo.GetTeamIdByUserID(claims.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get team by userID %d: %w", claims.UserID, err)
+		}
+
+		for _, project := range projects {
+			if project.Team.ID == teamID {
+				result = append(result, project)
+			}
+		}
+
+		return result, nil
+	}
+
+	return projects, nil
+}
+
 // Запрос для получения проекта по ID
 type GetProjectByIDQuery struct {
 	id uint32
@@ -42,7 +70,7 @@ func (uc *ProjectUseCases) GetProjectByID(ctx context.Context, query *GetProject
 	if claims.Role != adminRole {
 		teamID, err := uc.repo.GetTeamIdByUserID(claims.UserID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get team by userID id: %w", err)
+			return nil, fmt.Errorf("failed to get team by userID %d: %w", claims.UserID, err)
 		}
 
 		if project.Team.ID != teamID {

@@ -6,6 +6,7 @@ type ProjectRepository interface {
 	CreateProject(project *models.Project) (uint32, error)
 	UpdateProject(project *models.Project) error
 	DeleteProject(projectID uint32) error
+	GetAllProjects() ([]*models.Project, error)
 	GetProjectById(projectID uint32) (*models.Project, error)
 
 	CreateTeam(team *models.Team) (uint32, error)

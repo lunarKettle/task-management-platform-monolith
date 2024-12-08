@@ -77,6 +77,69 @@ func (r *ProjectRepository) DeleteProject(projectId uint32) error {
 	return nil
 }
 
+func (r *ProjectRepository) GetAllProjects() ([]*models.Project, error) {
+	query := `
+	SELECT 
+    	p.id, 
+		p.name, 
+		p.description, 
+		p.start_date, 
+		p.planned_end_date, 
+		p.actual_end_date, 
+		p.status, 
+		p.priority,  
+    	p.team_id, 
+		p.budget
+	FROM 
+    	projects p;`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query projects: %w", err)
+	}
+	defer rows.Close()
+
+	var projects []*models.Project
+	for rows.Next() {
+		project := &models.Project{}
+		var teamID sql.NullInt64
+
+		err := rows.Scan(
+			&project.Id,
+			&project.Name,
+			&project.Description,
+			&project.StartDate,
+			&project.PlannedEndDate,
+			&project.ActualEndDate,
+			&project.Status,
+			&project.Priority,
+			&teamID,
+			&project.Budget,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan project row: %w", err)
+		}
+
+		if teamID.Valid {
+			team, err := r.GetTeamById(uint32(teamID.Int64))
+			if err != nil {
+				return nil, fmt.Errorf("failed to get team for project %d: %w", project.Id, err)
+			}
+			project.Team = *team
+		} else {
+			project.Team = models.Team{}
+		}
+
+		projects = append(projects, project)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error occurred during row iteration: %w", err)
+	}
+
+	return projects, nil
+}
+
 func (r *ProjectRepository) GetProjectById(projectId uint32) (*models.Project, error) {
 	query := `
 	SELECT 
@@ -129,30 +192,95 @@ func (r *ProjectRepository) GetProjectById(projectId uint32) (*models.Project, e
 }
 
 func (r *ProjectRepository) CreateTeam(team *models.Team) (uint32, error) {
-	query := `INSERT INTO teams (name, manager_id)
-		VALUES ($1, $2)
-		RETURNING id`
-
-	var id uint32
-	err := r.db.QueryRow(query, team.Name, team.ManagerID).Scan(&id)
+	tx, err := r.db.Begin()
 	if err != nil {
-		return 0, fmt.Errorf("error inserting team: %v", err)
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	return id, nil
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
+
+	checkQuery := "SELECT team_id FROM users WHERE id = $1 FOR UPDATE"
+	var existingValue sql.NullString
+	err = tx.QueryRow(checkQuery, team.ManagerID).Scan(&existingValue)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("record with id %d not found: %w", team.ManagerID, common.ErrNotFound)
+		}
+		return 0, fmt.Errorf("failed to check column: %w", err)
+	}
+
+	if existingValue.Valid {
+		return 0, fmt.Errorf("team_id is not NULL for id %d", team.ManagerID)
+	}
+
+	insertTeamQuery := `INSERT INTO teams (name, manager_id) VALUES ($1, $2) RETURNING id`
+	var teamID uint32
+	err = tx.QueryRow(insertTeamQuery, team.Name, team.ManagerID).Scan(&teamID)
+	if err != nil {
+		return 0, fmt.Errorf("error inserting team: %w", err)
+	}
+
+	updateQuery := "UPDATE users SET team_id = $1 WHERE id = $2"
+	_, err = tx.Exec(updateQuery, teamID, team.ManagerID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to set team_id: %w", err)
+	}
+
+	return teamID, nil
 }
 
 func (r *ProjectRepository) UpdateTeam(team *models.Team) error {
-	query := `UPDATE teams
-		SET name = $1, manager_id = $2
-		WHERE id = $3`
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
 
-	_, err := r.db.Exec(query, team.Name, team.ManagerID, team.ID)
+	checkQuery := "SELECT team_id FROM users WHERE id = $1 FOR UPDATE"
+	var existingTeamID sql.NullInt32
+	err = tx.QueryRow(checkQuery, team.ManagerID).Scan(&existingTeamID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return fmt.Errorf("team with id %d not found: %w", team.ID, common.ErrNotFound)
+			return fmt.Errorf("record with id %d not found: %w", team.ManagerID, common.ErrNotFound)
 		}
-		return fmt.Errorf("error updating project: %v", err)
+		return fmt.Errorf("failed to check team_id: %w", err)
 	}
+
+	if !existingTeamID.Valid || uint32(existingTeamID.Int32) != team.ID {
+		return fmt.Errorf("manager with id %d is not associated with team %d", team.ManagerID, team.ID)
+	}
+
+	updateTeamQuery := `
+		UPDATE teams
+		SET name = $1, manager_id = $2
+		WHERE id = $3
+	`
+	_, err = tx.Exec(updateTeamQuery, team.Name, team.ManagerID, team.ID)
+	if err != nil {
+		return fmt.Errorf("failed to update team: %w", err)
+	}
+
+	updateUserQuery := `
+		UPDATE users
+		SET team_id = $1
+		WHERE id = $2
+	`
+	_, err = tx.Exec(updateUserQuery, team.ID, team.ManagerID)
+	if err != nil {
+		return fmt.Errorf("failed to update user team_id: %w", err)
+	}
+
 	return nil
 }
 
@@ -199,7 +327,7 @@ func (r *ProjectRepository) GetTeamById(teamId uint32) (*models.Team, error) {
 }
 
 func (r *ProjectRepository) GetTeamIdByUserID(userID uint32) (uint32, error) {
-	var teamID uint32
+	var teamID sql.NullInt32
 	query := "SELECT team_id FROM users WHERE id = $1"
 
 	err := r.db.QueryRow(query, userID).Scan(&teamID)
@@ -210,7 +338,11 @@ func (r *ProjectRepository) GetTeamIdByUserID(userID uint32) (uint32, error) {
 		return 0, err
 	}
 
-	return teamID, nil
+	if !teamID.Valid {
+		return 0, fmt.Errorf("team_id is NULL for user id %d: %w", userID, common.ErrNotFound)
+	}
+
+	return uint32(teamID.Int32), nil
 }
 
 func (r *ProjectRepository) CreateTask(task *models.Task) (uint32, error) {

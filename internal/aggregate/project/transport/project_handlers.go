@@ -26,6 +26,7 @@ func NewProjectHandlers(usecases *usecases.ProjectUseCases) *ProjectHandlers {
 type handler = func(w http.ResponseWriter, r *http.Request) error
 
 func (h *ProjectHandlers) RegisterRoutes(mux *http.ServeMux, errorHandler func(handler) http.Handler) {
+	mux.Handle("GET /projects", errorHandler(h.getAllProjects))
 	mux.Handle("GET /projects/{id}", errorHandler(h.getProject))
 	mux.Handle("POST /projects", errorHandler(h.createProject))
 	mux.Handle("PUT /projects", errorHandler(h.updateProject))
@@ -40,6 +41,21 @@ func (h *ProjectHandlers) RegisterRoutes(mux *http.ServeMux, errorHandler func(h
 	mux.Handle("POST /tasks", errorHandler(h.createTask))
 	mux.Handle("PUT /tasks", errorHandler(h.updateTask))
 	mux.Handle("DELETE /tasks/{id}", errorHandler(h.deleteTask))
+}
+
+func (h *ProjectHandlers) getAllProjects(w http.ResponseWriter, r *http.Request) error {
+	projects, err := h.usecases.GetAllProjects(r.Context())
+
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(projects); err != nil {
+		err = fmt.Errorf("failed to encode project to JSON: %w", err)
+		return err
+	}
+	return err
 }
 
 func (h *ProjectHandlers) getProject(w http.ResponseWriter, r *http.Request) error {
