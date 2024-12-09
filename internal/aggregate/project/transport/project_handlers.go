@@ -32,10 +32,13 @@ func (h *ProjectHandlers) RegisterRoutes(mux *http.ServeMux, errorHandler func(h
 	mux.Handle("PUT /projects", errorHandler(h.updateProject))
 	mux.Handle("DELETE /projects/{id}", errorHandler(h.deleteProject))
 
+	mux.Handle("GET /teams", errorHandler(h.getAllTeams))
 	mux.Handle("GET /teams/{id}", errorHandler(h.getTeam))
 	mux.Handle("POST /teams", errorHandler(h.createTeam))
 	mux.Handle("PUT /teams", errorHandler(h.updateTeam))
 	mux.Handle("DELETE /teams/{id}", errorHandler(h.deleteTeam))
+
+	mux.Handle("GET /members", errorHandler(h.getAllMembers))
 
 	mux.Handle("GET /tasks/{id}", errorHandler(h.getTask))
 	mux.Handle("POST /tasks", errorHandler(h.createTask))
@@ -177,6 +180,21 @@ func (h *ProjectHandlers) deleteProject(w http.ResponseWriter, r *http.Request) 
 	return nil
 }
 
+func (h *ProjectHandlers) getAllTeams(w http.ResponseWriter, r *http.Request) error {
+	teams, err := h.usecases.GetAllTeams(r.Context())
+
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(teams); err != nil {
+		err = fmt.Errorf("failed to encode team to JSON: %w", err)
+		return err
+	}
+	return err
+}
+
 func (h *ProjectHandlers) getTeam(w http.ResponseWriter, r *http.Request) error {
 	var id uint32
 
@@ -311,6 +329,21 @@ func (h *ProjectHandlers) deleteTeam(w http.ResponseWriter, r *http.Request) err
 	w.WriteHeader(http.StatusNoContent)
 
 	return nil
+}
+
+func (h *ProjectHandlers) getAllMembers(w http.ResponseWriter, r *http.Request) error {
+	members, err := h.usecases.GetAllMembers(r.Context())
+
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(members); err != nil {
+		err = fmt.Errorf("failed to encode team to JSON: %w", err)
+		return err
+	}
+	return err
 }
 
 func (h *ProjectHandlers) getTask(w http.ResponseWriter, r *http.Request) error {

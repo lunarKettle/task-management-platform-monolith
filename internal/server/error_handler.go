@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -13,32 +14,66 @@ type handler = func(http.ResponseWriter, *http.Request) error
 func errorHandling(handler handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := handler(w, r); err != nil {
+			log.Printf("Error: %v", err)
+			var (
+				code         int
+				errorMessage string
+			)
+
 			switch {
 			case errors.Is(err, common.ErrNotFound):
-				log.Printf("Error: %v", err)
-				http.Error(w, err.Error(), http.StatusNotFound)
+				errorMessage = common.ErrNotFound.Error()
+				code = http.StatusNotFound
+
 			case errors.Is(err, common.ErrAlreadyExists):
-				log.Printf("Error: %v", err)
-				http.Error(w, err.Error(), http.StatusConflict)
+				errorMessage = common.ErrAlreadyExists.Error()
+				code = http.StatusConflict
+
 			case errors.Is(err, common.ErrInvalidCredentials):
-				log.Printf("Error: %v", err)
-				http.Error(w, err.Error(), http.StatusUnauthorized)
+				errorMessage = common.ErrInvalidCredentials.Error()
+				code = http.StatusUnauthorized
+
 			case errors.Is(err, common.ErrInvalidToken):
-				log.Printf("Error: %v", err)
-				http.Error(w, err.Error(), http.StatusUnauthorized)
+				errorMessage = common.ErrInvalidToken.Error()
+				code = http.StatusUnauthorized
+
 			case errors.Is(err, common.ErrUnexpectedSigningMethod):
-				log.Printf("Error: %v", err)
-				http.Error(w, err.Error(), http.StatusUnauthorized)
+				errorMessage = common.ErrUnexpectedSigningMethod.Error()
+				code = http.StatusUnauthorized
+
 			case errors.Is(err, common.ErrTokenNotValid):
-				log.Printf("Error: %v", err)
-				http.Error(w, err.Error(), http.StatusUnauthorized)
+				errorMessage = common.ErrTokenNotValid.Error()
+				code = http.StatusUnauthorized
+
 			case errors.Is(err, common.ErrForbidden):
-				log.Printf("Error: %v", err)
-				http.Error(w, err.Error(), http.StatusForbidden)
+				errorMessage = common.ErrForbidden.Error()
+				code = http.StatusForbidden
+
 			default:
-				log.Printf("Unexpected error: %v", err)
+				errorMessage = err.Error()
+				code = http.StatusInternalServerError
 				http.Error(w, "internal server error", http.StatusInternalServerError)
 			}
+
+			log.Printf("Error: %v", err)
+
+			httpError := &HTTPError{
+				Code:  code,
+				Error: errorMessage,
+			}
+			WriteHTTPError(w, httpError)
 		}
 	})
+}
+
+type HTTPError struct {
+	Code        int    `json:"code"`
+	Error       string `json:"error"`
+	Description string `json:"description,omitempty"`
+}
+
+func WriteHTTPError(w http.ResponseWriter, err *HTTPError) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(err.Code)
+	json.NewEncoder(w).Encode(err)
 }

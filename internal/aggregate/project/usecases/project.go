@@ -126,7 +126,7 @@ func (p *ProjectUseCases) CreateProject(ctx context.Context, cmd *CreateProjectC
 		ActualEndDate:  time.Time{},
 		Status:         cmd.status,
 		Priority:       cmd.priority,
-		Team:           models.Team{ID: cmd.teamId},
+		Team:           &models.Team{ID: cmd.teamId},
 		Budget:         cmd.budget,
 	}
 
@@ -189,7 +189,7 @@ func (p *ProjectUseCases) UpdateProject(ctx context.Context, cmd *UpdateProjectC
 		if errors.Is(err, common.ErrNotFound) {
 			return fmt.Errorf("project with id %d is not found: %w", cmd.id, err)
 		}
-		return err
+		return fmt.Errorf("failed to get project with id %d: %w", cmd.id, err)
 	}
 
 	project := &models.Project{
@@ -201,7 +201,7 @@ func (p *ProjectUseCases) UpdateProject(ctx context.Context, cmd *UpdateProjectC
 		ActualEndDate:  cmd.actualEndDate,
 		Status:         cmd.status,
 		Priority:       cmd.priority,
-		Team:           models.Team{ID: cmd.teamId},
+		Team:           &models.Team{ID: cmd.teamId},
 		Budget:         cmd.budget,
 	}
 
@@ -231,6 +231,29 @@ func (p *ProjectUseCases) DeleteProject(ctx context.Context, cmd *DeleteProjectC
 		return fmt.Errorf("failed to delete project: %w", err)
 	}
 	return nil
+}
+
+func (uc *ProjectUseCases) GetAllTeams(ctx context.Context) ([]*models.Team, error) {
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+
+	teams, err := uc.repo.GetAllTeams()
+	var result []*models.Team
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all teams: %w", err)
+	}
+
+	if claims.Role != adminRole {
+		for _, team := range teams {
+			for _, member := range team.Members {
+				if member.ID == claims.UserID {
+					result = append(result, team)
+				}
+			}
+		}
+		return result, nil
+	}
+
+	return teams, nil
 }
 
 // Запрос для получения команды по ID
@@ -355,6 +378,15 @@ func (p *ProjectUseCases) DeleteTeam(ctx context.Context, cmd *DeleteTeamCommand
 		return fmt.Errorf("failed to delete team: %w", err)
 	}
 	return nil
+}
+
+func (uc *ProjectUseCases) GetAllMembers(ctx context.Context) ([]*models.Member, error) {
+	members, err := uc.repo.GetAllMembers()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all members: %w", err)
+	}
+
+	return members, nil
 }
 
 // Запрос для получения задачи по ID

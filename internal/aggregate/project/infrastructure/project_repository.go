@@ -125,9 +125,9 @@ func (r *ProjectRepository) GetAllProjects() ([]*models.Project, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to get team for project %d: %w", project.Id, err)
 			}
-			project.Team = *team
+			project.Team = team
 		} else {
-			project.Team = models.Team{}
+			project.Team = nil
 		}
 
 		projects = append(projects, project)
@@ -142,28 +142,32 @@ func (r *ProjectRepository) GetAllProjects() ([]*models.Project, error) {
 
 func (r *ProjectRepository) GetProjectById(projectId uint32) (*models.Project, error) {
 	query := `
-	SELECT 
-    	p.id, 
-		p.name, 
-		p.description, 
-		p.start_date, 
-		p.planned_end_date, 
-		p.actual_end_date, 
-		p.status, p.priority,  
-    	p.team_id, 
-		t.name AS team_name,
-		t.manager_id,
-		p.budget
-	FROM 
-    	projects p
-	LEFT JOIN
-    	teams t
-	ON
-    	p.team_id = t.id
-	WHERE 
-    	p.id = $1;`
+    SELECT 
+        p.id, 
+        p.name, 
+        p.description, 
+        p.start_date, 
+        p.planned_end_date, 
+        p.actual_end_date, 
+        p.status, 
+        p.priority,  
+        p.team_id, 
+        t.name AS team_name,
+        t.manager_id,
+        p.budget
+    FROM 
+        projects p
+    LEFT JOIN
+        teams t
+    ON
+        p.team_id = t.id
+    WHERE 
+        p.id = $1;`
 
 	project := &models.Project{}
+	var teamID sql.NullInt64
+	var teamName sql.NullString
+	var managerID sql.NullInt64
 
 	row := r.db.QueryRow(query, projectId)
 
@@ -176,9 +180,9 @@ func (r *ProjectRepository) GetProjectById(projectId uint32) (*models.Project, e
 		&project.ActualEndDate,
 		&project.Status,
 		&project.Priority,
-		&project.Team.ID,
-		&project.Team.Name,
-		&project.Team.ManagerID,
+		&teamID,
+		&teamName,
+		&managerID,
 		&project.Budget)
 
 	if err != nil {
@@ -186,6 +190,16 @@ func (r *ProjectRepository) GetProjectById(projectId uint32) (*models.Project, e
 			return nil, fmt.Errorf("project with id %d not found: %w", projectId, common.ErrNotFound)
 		}
 		return nil, err
+	}
+
+	if teamID.Valid {
+		project.Team = &models.Team{
+			ID:        uint32(teamID.Int64),
+			Name:      teamName.String,
+			ManagerID: uint32(managerID.Int64),
+		}
+	} else {
+		project.Team = nil
 	}
 
 	return project, nil
@@ -297,6 +311,88 @@ func (r *ProjectRepository) DeleteTeam(teamId uint32) error {
 	return nil
 }
 
+func (r *ProjectRepository) GetAllTeams() ([]*models.Team, error) {
+	query := `
+	SELECT 
+		t.id, 
+		t.name, 
+		t.manager_id, 
+		u.id AS member_id,
+		u.username, 
+		u.role 
+	FROM 
+		teams t
+	LEFT JOIN 
+		users u 
+	ON 
+		u.team_id = t.id
+	ORDER BY 
+		t.id, u.id`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query teams: %w", err)
+	}
+	defer rows.Close()
+
+	var teams []*models.Team
+	var currentTeam *models.Team
+	var lastTeamID uint32
+
+	for rows.Next() {
+		var (
+			teamID     uint32
+			teamName   string
+			managerID  sql.NullInt64
+			memberID   sql.NullInt64
+			memberName string
+			role       sql.NullString
+		)
+
+		err = rows.Scan(&teamID, &teamName, &managerID, &memberID, &memberName, &role)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan team row: %w", err)
+		}
+
+		// Если мы перешли к новой команде
+		if currentTeam == nil || teamID != lastTeamID {
+			if currentTeam != nil {
+				teams = append(teams, currentTeam)
+			}
+			currentTeam = &models.Team{
+				ID:      teamID,
+				Name:    teamName,
+				Members: []models.Member{},
+			}
+			if managerID.Valid {
+				currentTeam.ManagerID = uint32(managerID.Int64)
+			}
+			lastTeamID = teamID
+		}
+
+		// Добавляем участника, если он есть
+		if memberID.Valid {
+			currentTeam.Members = append(currentTeam.Members, models.Member{
+				ID:   uint32(memberID.Int64),
+				Name: memberName,
+				Role: role.String,
+			})
+		}
+	}
+
+	// Добавляем последнюю команду, если есть
+	if currentTeam != nil {
+		teams = append(teams, currentTeam)
+	}
+
+	// Проверяем ошибки при итерации
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over team rows: %w", err)
+	}
+
+	return teams, nil
+}
+
 func (r *ProjectRepository) GetTeamById(teamId uint32) (*models.Team, error) {
 	query := `
 	SELECT 
@@ -343,6 +439,60 @@ func (r *ProjectRepository) GetTeamIdByUserID(userID uint32) (uint32, error) {
 	}
 
 	return uint32(teamID.Int32), nil
+}
+
+func (r *ProjectRepository) GetAllMembers() ([]*models.Member, error) {
+	query := `
+	SELECT 
+		id, 
+		username, 
+		role, 
+		team_id 
+	FROM 
+		users`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query members: %w", err)
+	}
+	defer rows.Close()
+
+	var members []*models.Member
+
+	for rows.Next() {
+		var (
+			memberID uint32
+			name     string
+			role     sql.NullString
+			teamID   sql.NullInt64
+		)
+
+		err = rows.Scan(&memberID, &name, &role, &teamID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan member row: %w", err)
+		}
+
+		member := &models.Member{
+			ID:   memberID,
+			Name: name,
+			Role: role.String, // Если `role` NULL, будет пустая строка
+		}
+
+		if teamID.Valid {
+			member.TeamID = uint32(teamID.Int64)
+		} else {
+			member.TeamID = 0 // Если `team_id` NULL, используем 0 как значение по умолчанию
+		}
+
+		members = append(members, member)
+	}
+
+	// Проверяем ошибки, возникшие при итерации
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over member rows: %w", err)
+	}
+
+	return members, nil
 }
 
 func (r *ProjectRepository) CreateTask(task *models.Task) (uint32, error) {

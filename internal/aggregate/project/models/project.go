@@ -11,6 +11,6 @@ type Project struct {
 	ActualEndDate  time.Time
 	Status         string
 	Priority       uint32
-	Team           Team
+	Team           *Team
 	Budget         float64
 }

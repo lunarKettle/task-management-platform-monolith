@@ -1,7 +1,8 @@
-package middleware
+package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,14 +10,12 @@ import (
 	"github.com/lunarKettle/task-management-platform-monolith/pkg/common"
 )
 
-type tokenParser = func(string) (*common.Claims, error)
-
 var noAuthPaths = map[string]struct{}{
 	"/login":    {},
 	"/register": {},
 }
 
-func AuthMiddleware(next http.Handler, tokenParser tokenParser) http.Handler {
+func authMiddleware(next http.Handler, tokenParser tokenParser) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := noAuthPaths[r.URL.Path]; ok {
 			next.ServeHTTP(w, r)
@@ -34,8 +33,20 @@ func AuthMiddleware(next http.Handler, tokenParser tokenParser) http.Handler {
 		claims, err := tokenParser(token)
 
 		if err != nil {
+			if errors.Is(err, common.ErrInvalidToken) {
+				httpError := &HTTPError{
+					Code:  http.StatusUnauthorized,
+					Error: common.ErrInvalidToken.Error(),
+				}
+				WriteHTTPError(w, httpError)
+			} else {
+				httpError := &HTTPError{
+					Code:  http.StatusUnauthorized,
+					Error: "Unauthorized",
+				}
+				WriteHTTPError(w, httpError)
+			}
 			fmt.Print(err)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 

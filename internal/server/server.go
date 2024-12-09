@@ -3,7 +3,6 @@ package server
 import (
 	"net/http"
 
-	"github.com/lunarKettle/task-management-platform-monolith/internal/server/middleware"
 	"github.com/lunarKettle/task-management-platform-monolith/pkg/common"
 )
 
@@ -32,11 +31,11 @@ func (s *HTTPServer) Start(handlers ...Handler) error {
 		handler.RegisterRoutes(mux, errorHandling)
 	}
 
-	authMux := middleware.AuthMiddleware(mux, s.tokenParser)
+	authMux := authMiddleware(mux, s.tokenParser)
 
-	authAndLoggingMux := middleware.LoggingMiddleware(authMux)
+	authAndLoggingMux := loggingMiddleware(authMux)
 
-	finalMux := middleware.CORSMiddleware(authAndLoggingMux)
+	finalMux := corsMiddleware(authAndLoggingMux)
 
 	return http.ListenAndServe(s.address, finalMux)
 }

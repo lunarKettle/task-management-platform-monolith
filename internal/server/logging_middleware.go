@@ -1,4 +1,4 @@
-package middleware
+package server
 
 import (
 	"log"
@@ -6,19 +6,17 @@ import (
 	"time"
 )
 
-// LoggingMiddleware логирует входящие HTTP-запросы
-func LoggingMiddleware(next http.Handler) http.Handler {
+// loggingMiddleware логирует входящие HTTP-запросы
+func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-
-		log.Printf("Started %s %s", r.Method, r.URL.Path)
 
 		ww := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 		next.ServeHTTP(ww, r)
 
 		duration := time.Since(start)
-		log.Printf("Completed %d %s in %v", ww.statusCode, http.StatusText(ww.statusCode), duration)
+		log.Printf("Request %s %s processed in %v - %d %s", r.Method, r.URL.Path, duration, ww.statusCode, http.StatusText(ww.statusCode))
 	})
 }
 
@@ -29,9 +27,7 @@ type responseWriter struct {
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
-	log.Printf("WriteHeader called with status: %d", code)
 	if rw.written {
-		log.Printf("WriteHeader called again, skipping")
 		return
 	}
 	rw.written = true

@@ -12,8 +12,11 @@ type ProjectRepository interface {
 	CreateTeam(team *models.Team) (uint32, error)
 	UpdateTeam(team *models.Team) error
 	DeleteTeam(teamID uint32) error
+	GetAllTeams() ([]*models.Team, error)
 	GetTeamById(teamID uint32) (*models.Team, error)
 	GetTeamIdByUserID(userID uint32) (uint32, error)
+
+	GetAllMembers() ([]*models.Member, error)
 
 	CreateTask(task *models.Task) (uint32, error)
 	UpdateTask(task *models.Task) error
