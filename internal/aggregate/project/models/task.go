@@ -5,4 +5,5 @@ type Task struct {
 	Description string
 	EmployeeID  uint32
 	ProjectID   uint32
+	IsCompleted bool
 }

@@ -378,6 +378,7 @@ func (h *ProjectHandlers) createTask(w http.ResponseWriter, r *http.Request) err
 		requestData.Description,
 		requestData.EmployeeID,
 		requestData.ProjectID,
+		requestData.IsCompleted,
 	)
 
 	id, err := h.usecases.CreateTask(r.Context(), cmd)
@@ -407,6 +408,7 @@ func (h *ProjectHandlers) updateTask(w http.ResponseWriter, r *http.Request) err
 		requestData.Description,
 		requestData.EmployeeID,
 		requestData.ProjectID,
+		requestData.IsCompleted,
 	)
 
 	if err := h.usecases.UpdateTask(r.Context(), cmd); err != nil {

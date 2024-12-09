@@ -414,13 +414,15 @@ type CreateTaskCommand struct {
 	description string
 	employeeID  uint32
 	projectID   uint32
+	isCompleted bool
 }
 
-func NewCreateTaskCommand(description string, employeeID, projectID uint32) *CreateTaskCommand {
+func NewCreateTaskCommand(description string, employeeID, projectID uint32, isCompleted bool) *CreateTaskCommand {
 	return &CreateTaskCommand{
 		description: description,
 		employeeID:  employeeID,
 		projectID:   projectID,
+		isCompleted: isCompleted,
 	}
 }
 
@@ -435,6 +437,7 @@ func (uc *ProjectUseCases) CreateTask(ctx context.Context, cmd *CreateTaskComman
 		Description: cmd.description,
 		EmployeeID:  cmd.employeeID,
 		ProjectID:   cmd.projectID,
+		IsCompleted: cmd.isCompleted,
 	}
 
 	id, err := uc.repo.CreateTask(task)
@@ -450,14 +453,16 @@ type UpdateTaskCommand struct {
 	description string
 	employeeID  uint32
 	projectID   uint32
+	isCompleted bool
 }
 
-func NewUpdateTaskCommand(id uint32, description string, employeeID, projectID uint32) *UpdateTaskCommand {
+func NewUpdateTaskCommand(id uint32, description string, employeeID, projectID uint32, isCompleted bool) *UpdateTaskCommand {
 	return &UpdateTaskCommand{
 		id:          id,
 		description: description,
 		employeeID:  employeeID,
 		projectID:   projectID,
+		isCompleted: isCompleted,
 	}
 }
 
@@ -481,6 +486,7 @@ func (uc *ProjectUseCases) UpdateTask(ctx context.Context, cmd *UpdateTaskComman
 		Description: cmd.description,
 		EmployeeID:  cmd.employeeID,
 		ProjectID:   cmd.projectID,
+		IsCompleted: cmd.isCompleted,
 	}
 
 	if err := uc.repo.UpdateTask(task); err != nil {

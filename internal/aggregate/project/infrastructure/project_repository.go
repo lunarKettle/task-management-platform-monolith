@@ -496,15 +496,16 @@ func (r *ProjectRepository) GetAllMembers() ([]*models.Member, error) {
 }
 
 func (r *ProjectRepository) CreateTask(task *models.Task) (uint32, error) {
-	query := `INSERT INTO tasks (description, employee_id, project_id)
-		VALUES ($1, $2, $3)
+	query := `INSERT INTO tasks (description, employee_id, project_id, is_completed)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id`
 
 	var id uint32
 	err := r.db.QueryRow(query,
 		task.Description,
 		task.EmployeeID,
-		task.ProjectID).Scan(&id)
+		task.ProjectID,
+		task.IsCompleted).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("error inserting task: %v", err)
 	}
@@ -513,13 +514,14 @@ func (r *ProjectRepository) CreateTask(task *models.Task) (uint32, error) {
 
 func (r *ProjectRepository) UpdateTask(task *models.Task) error {
 	query := `UPDATE tasks
-		SET description = $1, employee_id = $2, project_id = $3
-		WHERE id = $4`
+		SET description = $1, employee_id = $2, project_id = $3, is_completed = $4
+		WHERE id = $5`
 
 	_, err := r.db.Exec(query,
 		task.Description,
 		task.EmployeeID,
 		task.ProjectID,
+		task.IsCompleted,
 		task.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -549,7 +551,8 @@ func (r *ProjectRepository) GetTaskById(taskID uint32) (*models.Task, error) {
     	t.id, 
 		t.description, 
 		t.employee_id, 
-		t.project_id
+		t.project_id,
+		t.is_completed
 	FROM 
     	tasks t
 	WHERE 
@@ -563,7 +566,9 @@ func (r *ProjectRepository) GetTaskById(taskID uint32) (*models.Task, error) {
 		&task.ID,
 		&task.Description,
 		&task.EmployeeID,
-		&task.ProjectID)
+		&task.ProjectID,
+		&task.IsCompleted,
+	)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -581,7 +586,8 @@ func (r *ProjectRepository) GetTasksByEmployeeID(employeeID uint32) ([]*models.T
     	t.id, 
 		t.description, 
 		t.employee_id, 
-		t.project_id
+		t.project_id,
+		t.is_completed
 	FROM 
     	tasks t
 	WHERE 
@@ -601,6 +607,7 @@ func (r *ProjectRepository) GetTasksByEmployeeID(employeeID uint32) ([]*models.T
 			&task.Description,
 			&task.EmployeeID,
 			&task.ProjectID,
+			&task.IsCompleted,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning task row: %v", err)
