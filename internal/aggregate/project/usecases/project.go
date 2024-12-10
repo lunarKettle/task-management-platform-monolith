@@ -533,3 +533,14 @@ func (uc *ProjectUseCases) GetTasksByEmployeeID(ctx context.Context, query *GetT
 	}
 	return tasks, nil
 }
+
+type TaskFilter struct {
+	EmployeeID  uint32
+	ProjectID   uint32
+	IsCompleted *bool
+}
+
+func (uc *ProjectUseCases) GetTasks(filter TaskFilter) ([]*models.Task, error) {
+	// Прямая передача фильтра в репозиторий
+	return uc.repo.GetTasks(filter)
+}

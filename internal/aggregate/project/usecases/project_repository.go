@@ -23,4 +23,5 @@ type ProjectRepository interface {
 	DeleteTask(taskID uint32) error
 	GetTaskById(taskID uint32) (*models.Task, error)
 	GetTasksByEmployeeID(employeeID uint32) ([]*models.Task, error)
+	GetTasks(filter TaskFilter) ([]*models.Task, error)
 }

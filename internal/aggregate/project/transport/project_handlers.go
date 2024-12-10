@@ -41,6 +41,7 @@ func (h *ProjectHandlers) RegisterRoutes(mux *http.ServeMux, errorHandler func(h
 	mux.Handle("GET /members", errorHandler(h.getAllMembers))
 
 	mux.Handle("GET /tasks/{id}", errorHandler(h.getTask))
+	mux.Handle("GET /tasks", errorHandler(h.getTasks))
 	mux.Handle("POST /tasks", errorHandler(h.createTask))
 	mux.Handle("PUT /tasks", errorHandler(h.updateTask))
 	mux.Handle("DELETE /tasks/{id}", errorHandler(h.deleteTask))
@@ -360,6 +361,32 @@ func (h *ProjectHandlers) getTask(w http.ResponseWriter, r *http.Request) error 
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(task); err != nil {
+		return fmt.Errorf("failed to encode task to JSON: %w", err)
+	}
+
+	return nil
+}
+
+func (h *ProjectHandlers) getTasks(w http.ResponseWriter, r *http.Request) error {
+	query := r.URL.Query()
+
+	employeeID, _ := strconv.Atoi(query.Get("employee_id"))
+	projectID, _ := strconv.Atoi(query.Get("project_id"))
+	isCompleted := query.Get("is_completed")
+
+	filter := usecases.TaskFilter{
+		EmployeeID:  uint32(employeeID),
+		ProjectID:   uint32(projectID),
+		IsCompleted: parseBool(isCompleted),
+	}
+
+	tasks, err := h.usecases.GetTasks(filter)
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(tasks); err != nil {
 		return fmt.Errorf("failed to encode task to JSON: %w", err)
 	}
 

@@ -3,8 +3,10 @@ package infrastructure
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/models"
+	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/usecases"
 	"github.com/lunarKettle/task-management-platform-monolith/pkg/common"
 )
 
@@ -617,6 +619,59 @@ func (r *ProjectRepository) GetTasksByEmployeeID(employeeID uint32) ([]*models.T
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over rows: %v", err)
+	}
+
+	return tasks, nil
+}
+
+func (r *ProjectRepository) GetTasks(filter usecases.TaskFilter) ([]*models.Task, error) {
+	var whereClauses []string
+	var args []interface{}
+
+	if filter.EmployeeID != 0 {
+		whereClauses = append(whereClauses, "employee_id = $"+fmt.Sprint(len(args)+1))
+		args = append(args, filter.EmployeeID)
+	}
+	if filter.ProjectID != 0 {
+		whereClauses = append(whereClauses, "project_id = $"+fmt.Sprint(len(args)+1))
+		args = append(args, filter.ProjectID)
+	}
+	if filter.IsCompleted != nil {
+		whereClauses = append(whereClauses, "is_completed = $"+fmt.Sprint(len(args)+1))
+		args = append(args, *filter.IsCompleted)
+	}
+
+	whereSQL := ""
+	if len(whereClauses) > 0 {
+		whereSQL = "WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, description, employee_id, project_id, is_completed
+		FROM tasks
+		%s
+		ORDER BY id`, whereSQL)
+
+	// Выполнение запроса
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+	defer rows.Close()
+
+	// Обработка результата
+	var tasks []*models.Task
+	for rows.Next() {
+		task := &models.Task{}
+		if err := rows.Scan(&task.ID, &task.Description, &task.EmployeeID, &task.ProjectID, &task.IsCompleted); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		tasks = append(tasks, task)
+	}
+
+	// Проверка на ошибки после итерации
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
 
 	return tasks, nil

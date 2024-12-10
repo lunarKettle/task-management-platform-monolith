@@ -11,3 +11,11 @@ func memberModelToDTO(member models.Member) dto.MemberDTO {
 		Role: member.Role,
 	}
 }
+
+func parseBool(value string) *bool {
+	if value == "" {
+		return nil
+	}
+	val := value == "true"
+	return &val
+}
