@@ -16,7 +16,8 @@ type ProjectRepository interface {
 	GetTeamById(teamID uint32) (*models.Team, error)
 	GetTeamIdByUserID(userID uint32) (uint32, error)
 
-	GetAllMembers() ([]*models.Member, error)
+	GetMember(userID uint32) (*models.Member, error)
+	GetMembers(filter MemberFilter) ([]*models.Member, error)
 
 	CreateTask(task *models.Task) (uint32, error)
 	UpdateTask(task *models.Task) error

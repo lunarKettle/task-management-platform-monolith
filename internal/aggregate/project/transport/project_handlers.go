@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/models"
 	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/transport/dto"
 	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/usecases"
 	"github.com/lunarKettle/task-management-platform-monolith/pkg/utils"
@@ -38,7 +39,7 @@ func (h *ProjectHandlers) RegisterRoutes(mux *http.ServeMux, errorHandler func(h
 	mux.Handle("PUT /teams", errorHandler(h.updateTeam))
 	mux.Handle("DELETE /teams/{id}", errorHandler(h.deleteTeam))
 
-	mux.Handle("GET /members", errorHandler(h.getAllMembers))
+	mux.Handle("GET /members", errorHandler(h.getMembers))
 
 	mux.Handle("GET /tasks/{id}", errorHandler(h.getTask))
 	mux.Handle("GET /tasks", errorHandler(h.getTasks))
@@ -52,6 +53,10 @@ func (h *ProjectHandlers) getAllProjects(w http.ResponseWriter, r *http.Request)
 
 	if err != nil {
 		return err
+	}
+
+	if projects == nil {
+		projects = []*models.Project{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -188,6 +193,10 @@ func (h *ProjectHandlers) getAllTeams(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
+	if teams == nil {
+		teams = []*models.Team{}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(teams); err != nil {
 		err = fmt.Errorf("failed to encode team to JSON: %w", err)
@@ -244,7 +253,7 @@ func (h *ProjectHandlers) createTeam(w http.ResponseWriter, r *http.Request) err
 
 	members := make([]usecases.Member, len(requestData.Members))
 	for i, v := range requestData.Members {
-		members[i] = *usecases.NewMember(v.ID, v.Role)
+		members[i] = *usecases.NewMember(v.ID, v.Name, v.Role)
 	}
 
 	cmd := usecases.NewCreateTeamCommand(
@@ -254,8 +263,6 @@ func (h *ProjectHandlers) createTeam(w http.ResponseWriter, r *http.Request) err
 	)
 
 	id, err := h.usecases.CreateTeam(r.Context(), cmd)
-
-	// добавить добавление участников команды через usecase
 
 	if err != nil {
 		return err
@@ -287,7 +294,7 @@ func (h *ProjectHandlers) updateTeam(w http.ResponseWriter, r *http.Request) err
 
 	members := make([]usecases.Member, len(requestData.Members))
 	for i, v := range requestData.Members {
-		members[i] = *usecases.NewMember(v.ID, v.Role)
+		members[i] = *usecases.NewMember(v.ID, v.Name, v.Role)
 	}
 
 	cmd := usecases.NewUpdateTeamCommand(
@@ -296,8 +303,6 @@ func (h *ProjectHandlers) updateTeam(w http.ResponseWriter, r *http.Request) err
 		members,
 		requestData.ManagerID,
 	)
-
-	// добавить изменение участников
 
 	err = h.usecases.UpdateTeam(r.Context(), cmd)
 
@@ -332,11 +337,25 @@ func (h *ProjectHandlers) deleteTeam(w http.ResponseWriter, r *http.Request) err
 	return nil
 }
 
-func (h *ProjectHandlers) getAllMembers(w http.ResponseWriter, r *http.Request) error {
-	members, err := h.usecases.GetAllMembers(r.Context())
+func (h *ProjectHandlers) getMembers(w http.ResponseWriter, r *http.Request) error {
+	query := r.URL.Query()
+
+	role := query.Get("role")
+	teamID, _ := strconv.Atoi(query.Get("team_id"))
+
+	filter := usecases.MemberFilter{
+		Role:   role,
+		TeamID: uint32(teamID),
+	}
+
+	members, err := h.usecases.GetMembers(r.Context(), filter)
 
 	if err != nil {
 		return err
+	}
+
+	if members == nil {
+		members = []*models.Member{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -385,9 +404,13 @@ func (h *ProjectHandlers) getTasks(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 
+	if tasks == nil {
+		tasks = []*models.Task{}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(tasks); err != nil {
-		return fmt.Errorf("failed to encode task to JSON: %w", err)
+		return fmt.Errorf("failed to encode tasks to JSON: %w", err)
 	}
 
 	return nil

@@ -345,6 +345,18 @@ func (p *ProjectUseCases) UpdateTeam(ctx context.Context, cmd *UpdateTeamCommand
 		return fmt.Errorf("failed to get user with id %d: %w", cmd.id, err)
 	}
 
+	for _, value := range cmd.members {
+		member, err := p.repo.GetMember(value.id)
+
+		if err != nil {
+			return fmt.Errorf("failed to get member by id %d: %w", value.id, err)
+		}
+
+		if member.Name != value.name {
+			return common.ErrForbidden
+		}
+	}
+
 	team := &models.Team{
 		ID:        cmd.id,
 		Name:      cmd.name,
@@ -380,10 +392,15 @@ func (p *ProjectUseCases) DeleteTeam(ctx context.Context, cmd *DeleteTeamCommand
 	return nil
 }
 
-func (uc *ProjectUseCases) GetAllMembers(ctx context.Context) ([]*models.Member, error) {
-	members, err := uc.repo.GetAllMembers()
+type MemberFilter struct {
+	Role   string
+	TeamID uint32
+}
+
+func (uc *ProjectUseCases) GetMembers(ctx context.Context, filter MemberFilter) ([]*models.Member, error) {
+	members, err := uc.repo.GetMembers(filter)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all members: %w", err)
+		return nil, fmt.Errorf("failed to get members: %w", err)
 	}
 
 	return members, nil
@@ -541,6 +558,5 @@ type TaskFilter struct {
 }
 
 func (uc *ProjectUseCases) GetTasks(filter TaskFilter) ([]*models.Task, error) {
-	// Прямая передача фильтра в репозиторий
 	return uc.repo.GetTasks(filter)
 }

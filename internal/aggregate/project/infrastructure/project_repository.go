@@ -287,14 +287,49 @@ func (r *ProjectRepository) UpdateTeam(team *models.Team) error {
 		return fmt.Errorf("failed to update team: %w", err)
 	}
 
+	existingMembersQuery := `
+		SELECT id
+		FROM users
+		WHERE team_id = $1
+	`
+	rows, err := tx.Query(existingMembersQuery, team.ID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve existing team members: %w", err)
+	}
+	defer rows.Close()
+
+	existingMemberIDs := make(map[uint32]bool)
+	for rows.Next() {
+		var memberID uint32
+		if err := rows.Scan(&memberID); err != nil {
+			return fmt.Errorf("failed to scan existing team member: %w", err)
+		}
+		existingMemberIDs[memberID] = true
+	}
+
 	updateUserQuery := `
 		UPDATE users
-		SET team_id = $1
-		WHERE id = $2
+		SET team_id = $1, role = $2
+		WHERE id = $3
 	`
-	_, err = tx.Exec(updateUserQuery, team.ID, team.ManagerID)
-	if err != nil {
-		return fmt.Errorf("failed to update user team_id: %w", err)
+	for _, member := range team.Members {
+		_, err = tx.Exec(updateUserQuery, team.ID, member.Role, member.ID)
+		if err != nil {
+			return fmt.Errorf("failed to update member (id: %d, role: %s): %w", member.ID, member.Role, err)
+		}
+		delete(existingMemberIDs, member.ID)
+	}
+
+	clearUserQuery := `
+		UPDATE users
+		SET team_id = NULL, role = ''
+		WHERE id = $1
+	`
+	for memberID := range existingMemberIDs {
+		_, err = tx.Exec(clearUserQuery, memberID)
+		if err != nil {
+			return fmt.Errorf("failed to clear member (id: %d): %w", memberID, err)
+		}
 	}
 
 	return nil
@@ -356,7 +391,6 @@ func (r *ProjectRepository) GetAllTeams() ([]*models.Team, error) {
 			return nil, fmt.Errorf("failed to scan team row: %w", err)
 		}
 
-		// Если мы перешли к новой команде
 		if currentTeam == nil || teamID != lastTeamID {
 			if currentTeam != nil {
 				teams = append(teams, currentTeam)
@@ -372,7 +406,6 @@ func (r *ProjectRepository) GetAllTeams() ([]*models.Team, error) {
 			lastTeamID = teamID
 		}
 
-		// Добавляем участника, если он есть
 		if memberID.Valid {
 			currentTeam.Members = append(currentTeam.Members, models.Member{
 				ID:   uint32(memberID.Int64),
@@ -382,12 +415,10 @@ func (r *ProjectRepository) GetAllTeams() ([]*models.Team, error) {
 		}
 	}
 
-	// Добавляем последнюю команду, если есть
 	if currentTeam != nil {
 		teams = append(teams, currentTeam)
 	}
 
-	// Проверяем ошибки при итерации
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over team rows: %w", err)
 	}
@@ -443,7 +474,38 @@ func (r *ProjectRepository) GetTeamIdByUserID(userID uint32) (uint32, error) {
 	return uint32(teamID.Int32), nil
 }
 
-func (r *ProjectRepository) GetAllMembers() ([]*models.Member, error) {
+func (r *ProjectRepository) GetMember(userID uint32) (*models.Member, error) {
+
+	query := `
+	SELECT 
+		id, 
+		username, 
+		role, 
+		team_id 
+	FROM 
+		users
+	WHERE
+		id = $1`
+
+	member := &models.Member{}
+	err := r.db.QueryRow(query, userID).Scan(
+		&member.ID,
+		&member.Name,
+		&member.Role,
+		&member.TeamID,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("no user found with id %d: %w", userID, common.ErrNotFound)
+		}
+		return nil, err
+	}
+
+	return member, nil
+}
+
+func (r *ProjectRepository) GetMembers(filter usecases.MemberFilter) ([]*models.Member, error) {
 	query := `
 	SELECT 
 		id, 
@@ -453,7 +515,23 @@ func (r *ProjectRepository) GetAllMembers() ([]*models.Member, error) {
 	FROM 
 		users`
 
-	rows, err := r.db.Query(query)
+	var whereClauses []string
+	var args []interface{}
+
+	if filter.Role != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("role = $%d", len(args)+1))
+		args = append(args, filter.Role)
+	}
+	if filter.TeamID != 0 {
+		whereClauses = append(whereClauses, fmt.Sprintf("team_id = $%d", len(args)+1))
+		args = append(args, filter.TeamID)
+	}
+
+	if len(whereClauses) > 0 {
+		query += " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query members: %w", err)
 	}
@@ -477,19 +555,18 @@ func (r *ProjectRepository) GetAllMembers() ([]*models.Member, error) {
 		member := &models.Member{
 			ID:   memberID,
 			Name: name,
-			Role: role.String, // Если `role` NULL, будет пустая строка
+			Role: role.String,
 		}
 
 		if teamID.Valid {
 			member.TeamID = uint32(teamID.Int64)
 		} else {
-			member.TeamID = 0 // Если `team_id` NULL, используем 0 как значение по умолчанию
+			member.TeamID = 0
 		}
 
 		members = append(members, member)
 	}
 
-	// Проверяем ошибки, возникшие при итерации
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over member rows: %w", err)
 	}
@@ -652,14 +729,12 @@ func (r *ProjectRepository) GetTasks(filter usecases.TaskFilter) ([]*models.Task
 		%s
 		ORDER BY id`, whereSQL)
 
-	// Выполнение запроса
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer rows.Close()
 
-	// Обработка результата
 	var tasks []*models.Task
 	for rows.Next() {
 		task := &models.Task{}
@@ -669,7 +744,6 @@ func (r *ProjectRepository) GetTasks(filter usecases.TaskFilter) ([]*models.Task
 		tasks = append(tasks, task)
 	}
 
-	// Проверка на ошибки после итерации
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
