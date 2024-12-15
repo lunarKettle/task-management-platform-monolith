@@ -2,3 +2,4 @@
 /.env
 /tasks.txt
 /business_operations.log
+/dump.sql
