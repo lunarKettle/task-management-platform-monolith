@@ -214,7 +214,7 @@ func (h *ProjectHandlers) getTeam(w http.ResponseWriter, r *http.Request) error 
 	}
 
 	query := usecases.NewGetTeamByIDQuery(id)
-	team, err := h.usecases.GetTeamByID(query)
+	team, err := h.usecases.GetTeamByID(r.Context(), query)
 
 	if err != nil {
 		return err
@@ -399,7 +399,7 @@ func (h *ProjectHandlers) getTasks(w http.ResponseWriter, r *http.Request) error
 		IsCompleted: parseBool(isCompleted),
 	}
 
-	tasks, err := h.usecases.GetTasks(filter)
+	tasks, err := h.usecases.GetTasks(r.Context(), filter)
 	if err != nil {
 		return err
 	}

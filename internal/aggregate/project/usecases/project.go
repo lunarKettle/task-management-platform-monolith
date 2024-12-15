@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"sync"
 	"time"
 
 	"github.com/lunarKettle/task-management-platform-monolith/internal/aggregate/project/models"
@@ -13,19 +16,36 @@ import (
 const adminRole string = "admin"
 
 type ProjectUseCases struct {
-	repo ProjectRepository
+	repo   ProjectRepository
+	logger *log.Logger
+	mu     sync.Mutex
 }
 
 func NewProjectUseCases(repo ProjectRepository) *ProjectUseCases {
-	return &ProjectUseCases{
-		repo: repo,
+	logFile, err := os.OpenFile("business_operations.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create log file: %v", err))
 	}
+
+	logger := log.New(logFile, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+
+	return &ProjectUseCases{
+		repo:   repo,
+		logger: logger,
+	}
+}
+
+func (uc *ProjectUseCases) logMessage(ctx context.Context, message string) {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+
+	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
+	uc.logger.Printf("UserID: %d, Role: %s - %s", claims.UserID, claims.Role, message)
 }
 
 // Запрос для получения всех проектов
 func (uc *ProjectUseCases) GetAllProjects(ctx context.Context) ([]*models.Project, error) {
 	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
-
 	projects, err := uc.repo.GetAllProjects()
 	var result []*models.Project
 	if err != nil {
@@ -47,6 +67,7 @@ func (uc *ProjectUseCases) GetAllProjects(ctx context.Context) ([]*models.Projec
 		return result, nil
 	}
 
+	uc.logMessage(ctx, "Fetching all projects")
 	return projects, nil
 }
 
@@ -78,6 +99,7 @@ func (uc *ProjectUseCases) GetProjectByID(ctx context.Context, query *GetProject
 		}
 	}
 
+	uc.logMessage(ctx, fmt.Sprintf("Fetching project by id: %d", query.id))
 	return project, nil
 }
 
@@ -111,7 +133,7 @@ func NewCreateProjectCommand(
 	}
 }
 
-func (p *ProjectUseCases) CreateProject(ctx context.Context, cmd *CreateProjectCommand) (uint32, error) {
+func (uc *ProjectUseCases) CreateProject(ctx context.Context, cmd *CreateProjectCommand) (uint32, error) {
 	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
 
 	if claims.Role != adminRole {
@@ -130,10 +152,12 @@ func (p *ProjectUseCases) CreateProject(ctx context.Context, cmd *CreateProjectC
 		Budget:         cmd.budget,
 	}
 
-	id, err := p.repo.CreateProject(project)
+	id, err := uc.repo.CreateProject(project)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create project: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Creating new project (id: %d)", id))
 	return id, nil
 }
 
@@ -176,14 +200,14 @@ func NewUpdateProjectCommand(
 	}
 }
 
-func (p *ProjectUseCases) UpdateProject(ctx context.Context, cmd *UpdateProjectCommand) error {
+func (uc *ProjectUseCases) UpdateProject(ctx context.Context, cmd *UpdateProjectCommand) error {
 	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
 
 	if claims.Role != adminRole {
 		return common.ErrForbidden
 	}
 
-	_, err := p.repo.GetProjectById(cmd.id)
+	_, err := uc.repo.GetProjectById(cmd.id)
 
 	if err != nil {
 		if errors.Is(err, common.ErrNotFound) {
@@ -205,9 +229,11 @@ func (p *ProjectUseCases) UpdateProject(ctx context.Context, cmd *UpdateProjectC
 		Budget:         cmd.budget,
 	}
 
-	if err := p.repo.UpdateProject(project); err != nil {
+	if err := uc.repo.UpdateProject(project); err != nil {
 		return fmt.Errorf("failed to update project: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Updating project (id: %d)", cmd.id))
 	return nil
 }
 
@@ -220,16 +246,18 @@ func NewDeleteProjectCommand(id uint32) *DeleteProjectCommand {
 	return &DeleteProjectCommand{id: id}
 }
 
-func (p *ProjectUseCases) DeleteProject(ctx context.Context, cmd *DeleteProjectCommand) error {
+func (uc *ProjectUseCases) DeleteProject(ctx context.Context, cmd *DeleteProjectCommand) error {
 	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
 
 	if claims.Role != adminRole {
 		return common.ErrForbidden
 	}
 
-	if err := p.repo.DeleteProject(cmd.id); err != nil {
+	if err := uc.repo.DeleteProject(cmd.id); err != nil {
 		return fmt.Errorf("failed to delete project: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Deleting project (id: %d)", cmd.id))
 	return nil
 }
 
@@ -253,6 +281,7 @@ func (uc *ProjectUseCases) GetAllTeams(ctx context.Context) ([]*models.Team, err
 		return result, nil
 	}
 
+	uc.logMessage(ctx, "Fetching all teams")
 	return teams, nil
 }
 
@@ -265,11 +294,13 @@ func NewGetTeamByIDQuery(id uint32) *GetProjectByIDQuery {
 	return &GetProjectByIDQuery{id: id}
 }
 
-func (p *ProjectUseCases) GetTeamByID(query *GetProjectByIDQuery) (*models.Team, error) {
-	team, err := p.repo.GetTeamById(query.id)
+func (uc *ProjectUseCases) GetTeamByID(ctx context.Context, query *GetProjectByIDQuery) (*models.Team, error) {
+	team, err := uc.repo.GetTeamById(query.id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get team by id: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Fetching team (id: %d)", query.id))
 	return team, nil
 }
 
@@ -288,7 +319,7 @@ func NewCreateTeamCommand(name string, members []Member, managerID uint32) *Crea
 	}
 }
 
-func (p *ProjectUseCases) CreateTeam(ctx context.Context, cmd *CreateTeamCommand) (uint32, error) {
+func (uc *ProjectUseCases) CreateTeam(ctx context.Context, cmd *CreateTeamCommand) (uint32, error) {
 	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
 
 	if claims.Role != adminRole {
@@ -301,10 +332,12 @@ func (p *ProjectUseCases) CreateTeam(ctx context.Context, cmd *CreateTeamCommand
 		ManagerID: cmd.managerID,
 	}
 
-	id, err := p.repo.CreateTeam(team)
+	id, err := uc.repo.CreateTeam(team)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create team: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Creating new team (id: %d)", id))
 	return id, nil
 }
 
@@ -329,14 +362,14 @@ func NewUpdateTeamCommand(
 	}
 }
 
-func (p *ProjectUseCases) UpdateTeam(ctx context.Context, cmd *UpdateTeamCommand) error {
+func (uc *ProjectUseCases) UpdateTeam(ctx context.Context, cmd *UpdateTeamCommand) error {
 	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
 
 	if claims.Role != adminRole {
 		return common.ErrForbidden
 	}
 
-	_, err := p.repo.GetTeamById(cmd.id)
+	_, err := uc.repo.GetTeamById(cmd.id)
 
 	if err != nil {
 		if errors.Is(err, common.ErrNotFound) {
@@ -346,7 +379,7 @@ func (p *ProjectUseCases) UpdateTeam(ctx context.Context, cmd *UpdateTeamCommand
 	}
 
 	for _, value := range cmd.members {
-		member, err := p.repo.GetMember(value.id)
+		member, err := uc.repo.GetMember(value.id)
 
 		if err != nil {
 			return fmt.Errorf("failed to get member by id %d: %w", value.id, err)
@@ -364,9 +397,11 @@ func (p *ProjectUseCases) UpdateTeam(ctx context.Context, cmd *UpdateTeamCommand
 		ManagerID: cmd.managerID,
 	}
 
-	if err := p.repo.UpdateTeam(team); err != nil {
+	if err := uc.repo.UpdateTeam(team); err != nil {
 		return fmt.Errorf("failed to update team: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Updating team (id: %d)", cmd.id))
 	return nil
 }
 
@@ -379,16 +414,18 @@ func NewDeleteTeamCommand(id uint32) *DeleteTeamCommand {
 	return &DeleteTeamCommand{id: id}
 }
 
-func (p *ProjectUseCases) DeleteTeam(ctx context.Context, cmd *DeleteTeamCommand) error {
+func (uc *ProjectUseCases) DeleteTeam(ctx context.Context, cmd *DeleteTeamCommand) error {
 	claims := ctx.Value(common.ContextKeyClaims).(*common.Claims)
 
 	if claims.Role != adminRole {
 		return common.ErrForbidden
 	}
 
-	if err := p.repo.DeleteTeam(cmd.id); err != nil {
+	if err := uc.repo.DeleteTeam(cmd.id); err != nil {
 		return fmt.Errorf("failed to delete team: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Deleting team (id: %d)", cmd.id))
 	return nil
 }
 
@@ -403,6 +440,7 @@ func (uc *ProjectUseCases) GetMembers(ctx context.Context, filter MemberFilter) 
 		return nil, fmt.Errorf("failed to get members: %w", err)
 	}
 
+	uc.logMessage(ctx, "Fetching teams members")
 	return members, nil
 }
 
@@ -423,6 +461,8 @@ func (uc *ProjectUseCases) GetTaskByID(ctx context.Context, query *GetTaskByIDQu
 		}
 		return nil, fmt.Errorf("failed to get task by id: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Fetching task (id: %d)", query.id))
 	return task, nil
 }
 
@@ -461,6 +501,8 @@ func (uc *ProjectUseCases) CreateTask(ctx context.Context, cmd *CreateTaskComman
 	if err != nil {
 		return 0, fmt.Errorf("failed to create task: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Creating new task (id: %d)", id))
 	return id, nil
 }
 
@@ -509,6 +551,8 @@ func (uc *ProjectUseCases) UpdateTask(ctx context.Context, cmd *UpdateTaskComman
 	if err := uc.repo.UpdateTask(task); err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Updating task (id: %d)", cmd.id))
 	return nil
 }
 
@@ -531,6 +575,8 @@ func (uc *ProjectUseCases) DeleteTask(ctx context.Context, cmd *DeleteTaskComman
 	if err := uc.repo.DeleteTask(cmd.id); err != nil {
 		return fmt.Errorf("failed to delete task: %w", err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Deleting task (id: %d)", cmd.id))
 	return nil
 }
 
@@ -548,6 +594,8 @@ func (uc *ProjectUseCases) GetTasksByEmployeeID(ctx context.Context, query *GetT
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tasks for employee id %d: %w", query.employeeID, err)
 	}
+
+	uc.logMessage(ctx, fmt.Sprintf("Fetching tasks by employee id (id: %d)", query.employeeID))
 	return tasks, nil
 }
 
@@ -557,6 +605,7 @@ type TaskFilter struct {
 	IsCompleted *bool
 }
 
-func (uc *ProjectUseCases) GetTasks(filter TaskFilter) ([]*models.Task, error) {
+func (uc *ProjectUseCases) GetTasks(ctx context.Context, filter TaskFilter) ([]*models.Task, error) {
+	uc.logMessage(ctx, "Fetching tasks")
 	return uc.repo.GetTasks(filter)
 }
