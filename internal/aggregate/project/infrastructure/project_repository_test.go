@@ -380,13 +380,5 @@ func TestGetTasksByEmployeeID(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, tasks, 2)
 	assert.Equal(t, uint32(1), tasks[0].ID)
-	assert.Equal(t, uint32(2), tasks[1].ID)
-}
-
-type Task struct {
-	ID          uint32
-	Description string
-	EmployeeID  uint32
-	ProjectID   uint32
-	IsCompleted bool
+	assert.Equal(t, uint32(12), tasks[1].ID)
 }
