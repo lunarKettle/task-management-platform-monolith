@@ -368,9 +368,9 @@ func TestGetTasksByEmployeeID(t *testing.T) {
 
 	employeeID := uint32(1)
 
-	rows := sqlmock.NewRows([]string{"id", "title", "description", "status", "assigned_to", "deadline"}).
-		AddRow(1, "Task 1", "Description 1", "active", 1, "2024-01-01").
-		AddRow(2, "Task 2", "Description 2", "completed", 1, "2024-01-02")
+	rows := sqlmock.NewRows([]string{"id", "description", "employee_id", "project_id", "is_completed"}).
+		AddRow(1, "Description 1", 1, 1, false).
+		AddRow(2, "Description 2", 2, 2, true)
 
 	mock.ExpectQuery(`SELECT .* FROM tasks`).
 		WithArgs(employeeID).
@@ -380,5 +380,13 @@ func TestGetTasksByEmployeeID(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, tasks, 2)
 	assert.Equal(t, uint32(1), tasks[0].ID)
-	assert.Equal(t, uint32(1), tasks[1].ID)
+	assert.Equal(t, uint32(2), tasks[1].ID)
+}
+
+type Task struct {
+	ID          uint32
+	Description string
+	EmployeeID  uint32
+	ProjectID   uint32
+	IsCompleted bool
 }
