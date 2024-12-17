@@ -3,6 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        GOPROXY: "https://goproxy.io"
+        GOMODCACHE: "$HOME/go/pkg/mod"
     ports:
       - "8080:8080"
     depends_on:
