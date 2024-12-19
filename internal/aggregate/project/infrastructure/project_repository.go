@@ -487,13 +487,19 @@ func (r *ProjectRepository) GetMember(userID uint32) (*models.Member, error) {
 	WHERE
 		id = $1`
 
+	var teamID sql.NullInt32
 	member := &models.Member{}
 	err := r.db.QueryRow(query, userID).Scan(
 		&member.ID,
 		&member.Name,
 		&member.Role,
-		&member.TeamID,
+		&teamID,
 	)
+	if teamID.Valid {
+		member.TeamID = uint32(teamID.Int32)
+	} else {
+		member.TeamID = 0
+	}
 
 	if err != nil {
 		if err == sql.ErrNoRows {
